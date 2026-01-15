@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import api, { Room } from '@/app/lib/api';
 import { toast } from 'react-hot-toast';
+import ConfirmationModal from './ConfirmationModal';
+import PromptModal from './PromptModal';
 
 interface RoomActionModalProps {
     isOpen: boolean;
@@ -14,39 +16,102 @@ interface RoomActionModalProps {
 export default function RoomActionModal({ isOpen, onClose, room, onUpdate }: RoomActionModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [auditNote, setAuditNote] = useState('');
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: (() => void) | null; title: string; message: string; variant?: 'danger' | 'warning' | 'info' }>({ isOpen: false, action: null, title: '', message: '', variant: 'info' });
+    const [promptModal, setPromptModal] = useState<{ isOpen: boolean; onSubmit: ((value: string) => void) | null; title: string; message: string; placeholder?: string }>({ isOpen: false, onSubmit: null, title: '', message: '' });
 
     if (!isOpen || !room) return null;
 
     const handleMarkClean = async () => {
-        if (!confirm(`Mark Room ${room.room_number} as CLEAN?`)) return;
+        setConfirmModal({
+            isOpen: true,
+            action: async () => {
+                setIsLoading(true);
+                try {
+                    await api.markRoomClean(room.id);
+                    onUpdate();
+                    onClose();
+                    setConfirmModal({ isOpen: false, action: null, title: '', message: '' });
+                    toast.success(`Room ${room.room_number} marked as clean`);
+                } catch (error) {
+                    console.error('Failed to mark clean', error);
+                    toast.error('Failed to update room status');
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            title: `Mark Room ${room.room_number} as Clean?`,
+            message: 'This will change the room status to Available.',
+            variant: 'info'
+        });
+    };
+
+    const handleMarkMaintenance = async () => {
+        setPromptModal({
+            isOpen: true,
+            onSubmit: async (reason: string) => {
+                setIsLoading(true);
+                try {
+                    await api.markRoomMaintenance(room.id, reason);
+                    onUpdate();
+                    onClose();
+                    setPromptModal({ isOpen: false, onSubmit: null, title: '', message: '' });
+                    toast.success(`Room ${room.room_number} marked under maintenance`);
+                } catch (error) {
+                    console.error('Failed to mark maintenance', error);
+                    toast.error('Failed to update room status');
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            title: 'Mark Room Under Maintenance',
+            message: `Enter maintenance reason for Room ${room.room_number}:`,
+            placeholder: 'Enter maintenance reason...'
+        });
+    };
+
+    const handleExtendBooking = async (type: 'NIGHTS' | 'SHORT_TO_OVERNIGHT', units: number) => {
         setIsLoading(true);
         try {
-            await api.markRoomClean(room.id);
-            onUpdate();
-            onClose();
+            if (room.current_booking_id) {
+                await api.extendBooking(room.current_booking_id, type, units);
+                toast.success('Extension successful! Please collect payment.');
+                onUpdate();
+                onClose();
+                setConfirmModal({ isOpen: false, action: null, title: '', message: '' });
+                setPromptModal({ isOpen: false, onSubmit: null, title: '', message: '' });
+            }
         } catch (error) {
-            console.error('Failed to mark clean', error);
-            alert('Failed to update room status');
+            console.error('Extension failed', error);
+            toast.error('Failed to extend booking');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleMarkMaintenance = async () => {
-        const reason = prompt("Enter maintenance reason:");
-        if (!reason) return;
-
-        setIsLoading(true);
-        try {
-            await api.markRoomMaintenance(room.id, reason);
-            onUpdate();
-            onClose();
-        } catch (error) {
-            console.error('Failed to mark maintenance', error);
-            alert('Failed to update room status');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleCheckOut = async () => {
+        setConfirmModal({
+            isOpen: true,
+            action: async () => {
+                setIsLoading(true);
+                try {
+                    if (room.current_booking_id) {
+                        await api.checkOut(room.current_booking_id);
+                        toast.success('Check-out successful');
+                        onUpdate();
+                        onClose();
+                        setConfirmModal({ isOpen: false, action: null, title: '', message: '' });
+                    }
+                } catch (error) {
+                    console.error('Failed to check out', error);
+                    toast.error('Failed to check out');
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            title: `Check out Room ${room.room_number}?`,
+            message: 'This will mark the room as dirty and complete the booking.',
+            variant: 'warning'
+        });
     };
 
     return (
@@ -112,28 +177,35 @@ export default function RoomActionModal({ isOpen, onClose, room, onUpdate }: Roo
 
                                         let units = 1;
                                         if (type === 'NIGHTS') {
-                                            const input = prompt(promptMsg, "1");
-                                            if (!input) return;
-                                            units = parseInt(input);
-                                            if (isNaN(units) || units < 1) return alert("Invalid number of nights");
+                                            setPromptModal({
+                                                isOpen: true,
+                                                onSubmit: async (input: string) => {
+                                                    const parsedUnits = parseInt(input);
+                                                    if (isNaN(parsedUnits) || parsedUnits < 1) {
+                                                        toast.error("Invalid number of nights");
+                                                        return;
+                                                    }
+                                                    units = parsedUnits;
+                                                    await handleExtendBooking(type, units);
+                                                },
+                                                title: 'Extend Stay',
+                                                message: 'How many nights to extend?',
+                                                placeholder: 'Enter number of nights...'
+                                            });
+                                            return;
                                         } else {
-                                            if (!confirm(promptMsg)) return;
+                                            setConfirmModal({
+                                                isOpen: true,
+                                                action: async () => {
+                                                    await handleExtendBooking(type, units);
+                                                },
+                                                title: 'Upgrade to Overnight?',
+                                                message: 'This will charge the difference between Short Rest and Overnight rates.',
+                                                variant: 'info'
+                                            });
+                                            return;
                                         }
 
-                                        setIsLoading(true);
-                                        try {
-                                            if (room.current_booking_id) {
-                                                await api.extendBooking(room.current_booking_id, type, units);
-                                                toast.success('Extension successful! Please collect payment.');
-                                                onUpdate();
-                                                onClose();
-                                            }
-                                        } catch (error) {
-                                            console.error('Extension failed', error);
-                                            toast.error('Failed to extend booking');
-                                        } finally {
-                                            setIsLoading(false);
-                                        }
                                     }}
                                     disabled={isLoading}
                                 >
@@ -157,23 +229,7 @@ export default function RoomActionModal({ isOpen, onClose, room, onUpdate }: Roo
                         {room.current_state === 'OCCUPIED' && room.current_booking_id && (
                             <button
                                 className="btn btn-outline-danger w-full justify-center"
-                                onClick={async () => {
-                                    if (!confirm(`Check out Room ${room.room_number}?`)) return;
-                                    setIsLoading(true);
-                                    try {
-                                        if (room.current_booking_id) {
-                                            await api.checkOut(room.current_booking_id);
-                                            toast.success('Check-out successful');
-                                            onUpdate();
-                                            onClose();
-                                        }
-                                    } catch (error) {
-                                        console.error('Failed to check out', error);
-                                        toast.error('Failed to check out');
-                                    } finally {
-                                        setIsLoading(false);
-                                    }
-                                }}
+                                onClick={handleCheckOut}
                                 disabled={isLoading}
                             >
                                 {isLoading ? 'Processing...' : '👋 Check Out Guest'}
@@ -182,6 +238,31 @@ export default function RoomActionModal({ isOpen, onClose, room, onUpdate }: Roo
                     </div>
                 </div>
             </div>
+
+            {/* Confirmation Modal */}
+            {confirmModal.isOpen && (
+                <ConfirmationModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ isOpen: false, action: null, title: '', message: '' })}
+                    onConfirm={() => confirmModal.action?.()}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    variant={confirmModal.variant || 'info'}
+                    isLoading={isLoading}
+                />
+            )}
+
+            {/* Prompt Modal */}
+            {promptModal.isOpen && (
+                <PromptModal
+                    isOpen={promptModal.isOpen}
+                    onClose={() => setPromptModal({ isOpen: false, onSubmit: null, title: '', message: '' })}
+                    onSubmit={(value) => promptModal.onSubmit?.(value)}
+                    title={promptModal.title}
+                    message={promptModal.message}
+                    placeholder={promptModal.placeholder}
+                />
+            )}
         </div>
     );
 }

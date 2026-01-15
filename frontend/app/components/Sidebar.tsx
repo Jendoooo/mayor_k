@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useState, useEffect } from 'react';
 import {
     LayoutDashboard,
     BedDouble,
@@ -18,7 +19,9 @@ import {
     Shield,
     PlusCircle,
     Sparkles,
-    Settings
+    Settings,
+    Menu,
+    X
 } from 'lucide-react';
 
 interface NavItem {
@@ -39,6 +42,12 @@ const isAdmin = (role: string) => role === 'ADMIN';
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const pathname = usePathname();
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+    // Close mobile menu when route changes
+    useEffect(() => {
+        setIsMobileOpen(false);
+    }, [pathname]);
 
     if (!user) return null;
     const role = user.role;
@@ -54,7 +63,28 @@ export default function Sidebar() {
     const showAdmin = isAdmin(role);
 
     return (
-        <aside className="fixed left-0 top-0 bottom-0 w-64 bg-midnight-blue border-r border-white/10 flex flex-col z-40 text-slate-300 shadow-2xl">
+        <>
+            {/* Mobile Menu Toggle Button */}
+            <button
+                onClick={() => setIsMobileOpen(!isMobileOpen)}
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-midnight-blue text-white rounded-lg shadow-lg hover:bg-blue-900 transition-colors"
+                aria-label="Toggle menu"
+            >
+                {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+
+            {/* Mobile Overlay */}
+            {isMobileOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-black/50 z-40"
+                    onClick={() => setIsMobileOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-midnight-blue border-r border-white/10 flex flex-col z-40 text-slate-300 shadow-2xl transition-transform duration-300 ${
+                isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            }`}>
             <div className="h-16 flex items-center px-6 border-b border-white/10 bg-midnight-blue/50 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-champagne-gold to-yellow-600 flex items-center justify-center font-serif font-bold text-white text-sm shadow-md">MK</div>
@@ -150,6 +180,7 @@ export default function Sidebar() {
                 </button>
             </div>
         </aside>
+        </>
     );
 }
 

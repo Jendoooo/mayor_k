@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/app/lib/api';
@@ -16,9 +16,11 @@ export default function LoginPage() {
     const router = useRouter();
 
     // Redirect if already logged in
-    if (user) {
-        router.push('/dashboard');
-    }
+    useEffect(() => {
+        if (user) {
+            router.push('/dashboard');
+        }
+    }, [user, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

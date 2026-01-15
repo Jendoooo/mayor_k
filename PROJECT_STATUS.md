@@ -1,7 +1,20 @@
 # Mayor K. Guest Palace - System Status & Technical Reference
+**Current Status:** Active Development - Phase 3 (Refinement & Security)
+**Last Updated:** January 15, 2026 (User Time)
 
-**Last Updated:** January 15, 2026 (Evening Update)
-**Version:** 1.1.0 (UI Redesign + Bar POS Fixes)
+### 🚀 Recent Accomplishments
+- **Audit Log Improvements:** Added `description` field for human-readable logs; populated for expenses and check-in/out.
+- **Settings Page:** Frontend UI for Managers/Admins to manage Room Rates and Product Prices.
+- **Security hardening:** Fixed login redirect loop, separated concerns, and improved API type safety.
+- **Role Management:** Full implementation of 7 staff roles with granular sidebar permissions.
+- **Bug Fixes:** Resolved runtime errors in Login/Sidebar; fixed guest data calculation.
+
+### 🚧 Active Tasks
+- [x] Create Settings Page
+- [x] Fix Login Runtime Errors
+- [x] Improve Audit Log comprehensiveness
+- [ ] Auto-checkout logic (Planned)
+- [ ] Stakeholder Dashboard refinements
 
 ## 1. System Overview (Non-Technical)
 The **Mayor K. Guest Palace Hotel Management System (HMS)** is a hybrid web application designed to manage hotel operations, bookings, and finances. It is tailored for the Nigerian context, handling specific scenarios like "Short Rest", "Overnight", and "Lodge" stays, as well as distinct "Stakeholder" views for owners.

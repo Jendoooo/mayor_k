@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api, { CreateExpenseData, ExpenseCategory } from '@/app/lib/api';
+import { toast } from 'react-hot-toast';
 
 interface LogExpenseModalProps {
     isOpen: boolean;
@@ -44,12 +45,20 @@ export default function LogExpenseModal({ isOpen, onClose, onSubmit }: LogExpens
 
         try {
             await api.createExpense(formData);
-            alert('Expense logged successfully!');
+            toast.success('Expense logged successfully!');
             onSubmit();
             onClose();
-        } catch (error) {
+            // Reset form
+            setFormData({
+                category: categories[0]?.id || '',
+                description: '',
+                amount: 0,
+                vendor_name: '',
+                expense_date: new Date().toISOString().split('T')[0],
+            });
+        } catch (error: any) {
             console.error('Failed to create expense:', error);
-            alert('Failed to log expense.');
+            toast.error(error?.message || 'Failed to log expense.');
         } finally {
             setIsLoading(false);
         }

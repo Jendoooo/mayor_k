@@ -32,6 +32,29 @@ class ProductViewSet(viewsets.ModelViewSet):
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'category__name']
 
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+        old_price = old_instance.price
+        
+        instance = serializer.save()
+        user = self.request.user if self.request.user.is_authenticated else None
+        
+        # Log Price Change
+        if old_price != instance.price:
+            SystemEvent.log(
+                event_type='PRODUCT_PRICE_UPDATE',
+                category=SystemEvent.EventCategory.INVENTORY,
+                actor=user,
+                target=instance,
+                description=f"Price updated for {instance.name}: ₦{old_price} -> ₦{instance.price}",
+                payload={
+                    'product': instance.name,
+                    'old_price': str(old_price),
+                    'new_price': str(instance.price)
+                },
+                request=self.request
+            )
+
     @action(detail=True, methods=['post'])
     def audit_stock(self, request, pk=None):
         """
@@ -69,12 +92,20 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
         
         # Create System Event for global Audit Log
-        SystemEvent.objects.create(
-            category='INVENTORY',
+        SystemEvent.log(
             event_type='STOCK_AUDIT',
+            category=SystemEvent.EventCategory.INVENTORY,
+            actor=request.user,
+            target=product,
             description=f"Stock adjusted for {product.name}: {old_quantity} -> {new_quantity} ({diff > 0 and '+' or ''}{diff}). Reason: {reason}",
-            user=request.user,
-            ip_address=request.META.get('REMOTE_ADDR', '')
+            payload={
+                'product': product.name,
+                'old_quantity': old_quantity,
+                'new_quantity': new_quantity,
+                'difference': diff,
+                'reason': reason
+            },
+            request=request
         )
         
         return Response({'status': 'Stock updated', 'new_quantity': new_quantity})

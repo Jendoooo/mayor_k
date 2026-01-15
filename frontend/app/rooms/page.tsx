@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { RoomGrid, RoomLegend } from '@/app/components/RoomCard';
 import QuickBookModal from '@/app/components/QuickBookModal';
+import ConfirmationModal from '@/app/components/ConfirmationModal';
+import PromptModal from '@/app/components/PromptModal';
 import api, { Room, QuickBookData } from '@/app/lib/api';
 import { toast } from 'react-hot-toast';
 
@@ -13,6 +15,8 @@ export default function RoomsPage() {
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [isQuickBookOpen, setIsQuickBookOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: (() => void) | null }>({ isOpen: false, action: null });
+    const [promptModal, setPromptModal] = useState<{ isOpen: boolean; onSubmit: ((value: string) => void) | null }>({ isOpen: false, onSubmit: null });
 
     useEffect(() => {
         fetchRooms();
@@ -37,29 +41,39 @@ export default function RoomsPage() {
     });
 
     const handleMarkClean = async (room: Room) => {
-        if (!confirm(`Mark Room ${room.room_number} as clean?`)) return;
-        try {
-            await api.markRoomClean(room.id);
-            fetchRooms(); // Refresh to show new state
-            setSelectedRoom(null);
-        } catch (error) {
-            console.error('Failed to mark clean:', error);
-            alert('Failed to update room status');
-        }
+        setConfirmModal({
+            isOpen: true,
+            action: async () => {
+                try {
+                    await api.markRoomClean(room.id);
+                    fetchRooms(); // Refresh to show new state
+                    setSelectedRoom(null);
+                    setConfirmModal({ isOpen: false, action: null });
+                    toast.success(`Room ${room.room_number} marked as clean`);
+                } catch (error) {
+                    console.error('Failed to mark clean:', error);
+                    toast.error('Failed to update room status');
+                }
+            }
+        });
     };
 
     const handleMarkMaintenance = async (room: Room) => {
-        const notes = prompt('Enter maintenance notes (reason):');
-        if (notes === null) return; // Cancelled
-
-        try {
-            await api.markRoomMaintenance(room.id, notes);
-            fetchRooms();
-            setSelectedRoom(null);
-        } catch (error) {
-            console.error('Failed to mark maintenance:', error);
-            alert('Failed to update room status');
-        }
+        setPromptModal({
+            isOpen: true,
+            onSubmit: async (notes: string) => {
+                try {
+                    await api.markRoomMaintenance(room.id, notes);
+                    fetchRooms();
+                    setSelectedRoom(null);
+                    setPromptModal({ isOpen: false, onSubmit: null });
+                    toast.success(`Room ${room.room_number} marked under maintenance`);
+                } catch (error) {
+                    console.error('Failed to mark maintenance:', error);
+                    toast.error('Failed to update room status');
+                }
+            }
+        });
     };
 
     const handleQuickBookSubmit = async (data: QuickBookData) => {
@@ -253,6 +267,32 @@ export default function RoomsPage() {
                 selectedRoom={selectedRoom || undefined}
                 onSubmit={handleQuickBookSubmit}
             />
+
+            {/* Confirmation Modal */}
+            {selectedRoom && confirmModal.isOpen && (
+                <ConfirmationModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ isOpen: false, action: null })}
+                    onConfirm={() => confirmModal.action?.()}
+                    title={`Mark Room ${selectedRoom.room_number} as Clean?`}
+                    message="This will change the room status to Available."
+                    confirmText="Mark Clean"
+                    variant="info"
+                />
+            )}
+
+            {/* Prompt Modal for Maintenance Notes */}
+            {selectedRoom && promptModal.isOpen && (
+                <PromptModal
+                    isOpen={promptModal.isOpen}
+                    onClose={() => setPromptModal({ isOpen: false, onSubmit: null })}
+                    onSubmit={(value) => promptModal.onSubmit?.(value)}
+                    title="Mark Room Under Maintenance"
+                    message={`Enter maintenance notes for Room ${selectedRoom.room_number}:`}
+                    placeholder="Enter maintenance reason..."
+                    submitText="Mark Maintenance"
+                />
+            )}
         </div>
     );
 }

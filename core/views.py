@@ -22,14 +22,12 @@ from core.serializers import (
 from bookings.models import RoomType, Room, Guest, Booking, RoomStateTransition, BookingExtension
 from finance.models import Transaction, ExpenseCategory, Expense
 from django.contrib.auth import login, logout, authenticate
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
 # ============ AUTH VIEWS ============
 
-@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'anon'  # Apply anonymous rate limiting (5/minute)
 
     def post(self, request):
         username = request.data.get('username')
@@ -174,6 +172,25 @@ class RoomTypeViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsManagerOrAdmin()]
         return super().get_permissions()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        user = self.request.user if self.request.user.is_authenticated else None
+        
+        SystemEvent.log(
+            event_type='ROOM_RATE_UPDATE',
+            category=SystemEvent.EventCategory.ADMIN,
+            actor=user,
+            target=instance,
+            description=f"Room Type '{instance.name}' rates updated by {user}",
+            payload={
+                'name': instance.name,
+                'short_rest': str(instance.base_rate_short_rest),
+                'overnight': str(instance.base_rate_overnight),
+                'lodge': str(instance.base_rate_lodge) if instance.base_rate_lodge else None
+            },
+            request=self.request
+        )
 
 
 class RoomViewSet(viewsets.ModelViewSet):

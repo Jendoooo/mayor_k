@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import api, { Expense } from '@/app/lib/api';
 import { useAuth } from '@/app/context/AuthContext';
 import LogExpenseModal from '@/app/components/LogExpenseModal';
+import ConfirmationModal from '@/app/components/ConfirmationModal';
+import PromptModal from '@/app/components/PromptModal';
 import { exportToCSV } from '@/app/lib/utils';
 import { Download } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,6 +15,8 @@ export default function ExpensesPage() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; expense: Expense | null; action: 'approve' | 'reject' | null }>({ isOpen: false, expense: null, action: null });
+    const [promptModal, setPromptModal] = useState<{ isOpen: boolean; expense: Expense | null; onSubmit: ((value: string) => void) | null }>({ isOpen: false, expense: null, onSubmit: null });
 
     useEffect(() => {
         fetchExpenses();
@@ -31,26 +35,41 @@ export default function ExpensesPage() {
     };
 
     const handleApprove = async (expense: Expense) => {
-        if (!confirm(`Approve expense ${expense.expense_ref}?`)) return;
-        try {
-            await api.approveExpense(expense.id);
-            fetchExpenses();
-        } catch (error) {
-            console.error('Failed to approve:', error);
-            alert('Failed to approve expense');
-        }
+        setConfirmModal({
+            isOpen: true,
+            expense,
+            action: 'approve'
+        });
     };
 
     const handleReject = async (expense: Expense) => {
-        const reason = prompt('Enter rejection reason:');
-        if (!reason) return;
+        setPromptModal({
+            isOpen: true,
+            expense,
+            onSubmit: async (reason: string) => {
+                try {
+                    await api.rejectExpense(expense.id, reason);
+                    fetchExpenses();
+                    setPromptModal({ isOpen: false, expense: null, onSubmit: null });
+                    toast.success(`Expense ${expense.expense_ref} rejected`);
+                } catch (error) {
+                    console.error('Failed to reject:', error);
+                    toast.error('Failed to reject expense');
+                }
+            }
+        });
+    };
 
+    const executeApprove = async () => {
+        if (!confirmModal.expense) return;
         try {
-            await api.rejectExpense(expense.id, reason);
+            await api.approveExpense(confirmModal.expense.id);
             fetchExpenses();
+            setConfirmModal({ isOpen: false, expense: null, action: null });
+            toast.success(`Expense ${confirmModal.expense.expense_ref} approved`);
         } catch (error) {
-            console.error('Failed to reject:', error);
-            alert('Failed to reject expense');
+            console.error('Failed to approve:', error);
+            toast.error('Failed to approve expense');
         }
     };
 
@@ -176,6 +195,32 @@ export default function ExpensesPage() {
                 onClose={() => setIsLogModalOpen(false)}
                 onSubmit={fetchExpenses}
             />
+
+            {/* Confirmation Modal for Approve */}
+            {confirmModal.isOpen && confirmModal.expense && (
+                <ConfirmationModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ isOpen: false, expense: null, action: null })}
+                    onConfirm={executeApprove}
+                    title={`Approve Expense ${confirmModal.expense.expense_ref}?`}
+                    message={`Amount: ₦${parseFloat(confirmModal.expense.amount).toLocaleString()}`}
+                    confirmText="Approve"
+                    variant="info"
+                />
+            )}
+
+            {/* Prompt Modal for Rejection Reason */}
+            {promptModal.isOpen && promptModal.expense && (
+                <PromptModal
+                    isOpen={promptModal.isOpen}
+                    onClose={() => setPromptModal({ isOpen: false, expense: null, onSubmit: null })}
+                    onSubmit={(value) => promptModal.onSubmit?.(value)}
+                    title="Reject Expense"
+                    message={`Enter rejection reason for ${promptModal.expense.expense_ref}:`}
+                    placeholder="Enter rejection reason..."
+                    submitText="Reject"
+                />
+            )}
         </div>
     );
 }

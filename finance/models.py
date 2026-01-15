@@ -307,6 +307,7 @@ class Expense(models.Model):
             category=SystemEvent.EventCategory.EXPENSE,
             actor=approved_by,
             target=self,
+            description=f"Expense of ₦{self.amount} for {self.category.name} approved by {approved_by.get_full_name() or approved_by.username}",
             payload={
                 'expense_ref': self.expense_ref,
                 'amount': str(self.amount),
@@ -329,6 +330,7 @@ class Expense(models.Model):
             category=SystemEvent.EventCategory.EXPENSE,
             actor=rejected_by,
             target=self,
+            description=f"Expense rejected by {rejected_by.get_full_name() or rejected_by.username}: {reason}",
             payload={
                 'expense_ref': self.expense_ref,
                 'amount': str(self.amount),

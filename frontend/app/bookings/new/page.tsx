@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import api from '@/app/lib/api';
 import { motion } from 'framer-motion';
 import { Calendar, Users, ArrowRight, Check } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 // Wrapper component to handle SearchParams in Suspense
 function BookingContent() {
@@ -118,7 +119,10 @@ function BookingContent() {
                                         <div className="flex items-center gap-2"><Check size={14} className="text-green-500" /> {room.room_type_name} Amenities</div>
                                     </div>
 
-                                    <button className="w-full border border-midnight-blue text-midnight-blue py-3 uppercase tracking-widest text-xs font-bold hover:bg-midnight-blue hover:text-white transition-colors flex items-center justify-center gap-2 group-hover:gap-3">
+                                    <button 
+                                        onClick={() => router.push(`/book/checkout?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&guests=${guests}`)}
+                                        className="w-full border border-midnight-blue text-midnight-blue py-3 uppercase tracking-widest text-xs font-bold hover:bg-midnight-blue hover:text-white transition-colors flex items-center justify-center gap-2 group-hover:gap-3"
+                                    >
                                         Book This Room <ArrowRight size={14} />
                                     </button>
                                 </div>

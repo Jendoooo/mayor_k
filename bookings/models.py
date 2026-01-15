@@ -338,6 +338,7 @@ class Booking(models.Model):
             category=SystemEvent.EventCategory.BOOKING,
             actor=user,
             target=self,
+            description=f"Check-in: {self.guest.name} -> {self.room.room_number}",
             payload={
                 'booking_ref': self.booking_ref,
                 'room': self.room.room_number,
@@ -368,6 +369,7 @@ class Booking(models.Model):
             category=SystemEvent.EventCategory.BOOKING,
             actor=user,
             target=self,
+            description=f"Check-out: {self.guest.name} from {self.room.room_number}",
             payload={
                 'booking_ref': self.booking_ref,
                 'room': self.room.room_number,

@@ -48,6 +48,11 @@ class User(AbstractUser):
         return f"{self.get_full_name() or self.username} ({self.get_role_display()})"
     
     @property
+    def full_name(self):
+        """Return user's full name or username if not set."""
+        return self.get_full_name() or self.username
+    
+    @property
     def is_manager_or_admin(self):
         return self.role in [self.Role.MANAGER, self.Role.ADMIN]
     
@@ -121,8 +126,11 @@ class SystemEvent(models.Model):
         PAYMENT = 'PAYMENT', 'Payment'
         ROOM = 'ROOM', 'Room'
         EXPENSE = 'EXPENSE', 'Expense'
-        AUTH = 'AUTH', 'Authentication'
-        ADMIN = 'ADMIN', 'Administration'
+        AUTH = 'AUTH', 'Auth'
+        ADMIN = 'ADMIN', 'Admin'
+        SECURITY = 'SECURITY', 'Security'
+        SYSTEM = 'SYSTEM', 'System'
+        INVENTORY = 'INVENTORY', 'Inventory'
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
@@ -154,6 +162,8 @@ class SystemEvent(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     
+    description = models.TextField(blank=True)
+    
     # Timestamp (never changes)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     
@@ -170,19 +180,9 @@ class SystemEvent(models.Model):
         return f"{self.event_type} by {self.actor} at {self.created_at}"
     
     @classmethod
-    def log(cls, event_type, category, actor=None, target=None, payload=None, request=None):
+    def log(cls, event_type, category, actor=None, target=None, payload=None, request=None, description=''):
         """
         Helper method to create audit log entries.
-        
-        Usage:
-            SystemEvent.log(
-                event_type='BOOKING_CREATED',
-                category=SystemEvent.EventCategory.BOOKING,
-                actor=request.user,
-                target=booking,
-                payload={'room_number': '101', 'guest_name': 'John Doe'},
-                request=request
-            )
         """
         event = cls(
             event_type=event_type,
@@ -190,6 +190,7 @@ class SystemEvent(models.Model):
             actor=actor,
             actor_role=actor.role if actor else '',
             payload=payload or {},
+            description=description,
         )
         
         if target:

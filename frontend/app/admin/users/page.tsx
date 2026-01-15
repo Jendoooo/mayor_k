@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { api, User } from "../../lib/api";
 import { Plus, Search, Shield, User as UserIcon, Loader2, Ban, CheckCircle, RefreshCw, MoreHorizontal, Users, ShieldAlert, Activity, Download } from "lucide-react";
 import UserManagementModal from "../../components/UserManagementModal";
+import ConfirmationModal from "../../components/ConfirmationModal";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { exportToCSV } from "../../lib/utils";
@@ -42,18 +43,21 @@ export default function UsersPage() {
         setIsModalOpen(true);
     };
 
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
+
     const handleToggleStatus = async (user: User) => {
+        setConfirmModal({ isOpen: true, user });
+    };
+
+    const executeToggleStatus = async () => {
+        if (!confirmModal.user) return;
+        const user = confirmModal.user;
         const action = user.is_active ? "suspend" : "activate";
-        const confirmMsg = user.is_active
-            ? "Suspending this user will immediately block their access. Continue?"
-            : "Activate this user account?";
-
-        if (!window.confirm(confirmMsg)) return;
-
         try {
             await api.activateUser(user.id, !user.is_active);
             toast.success(`User ${action}ed successfully`);
             fetchUsers();
+            setConfirmModal({ isOpen: false, user: null });
         } catch (err: any) {
             toast.error("Failed to update status");
         }
@@ -295,6 +299,21 @@ export default function UsersPage() {
                 user={selectedUser}
                 nextId={users.length + 1}
             />
+
+            {/* Confirmation Modal for User Status Toggle */}
+            {confirmModal.isOpen && confirmModal.user && (
+                <ConfirmationModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ isOpen: false, user: null })}
+                    onConfirm={executeToggleStatus}
+                    title={confirmModal.user.is_active ? "Suspend User?" : "Activate User?"}
+                    message={confirmModal.user.is_active
+                        ? `Suspending ${confirmModal.user.username} will immediately block their access. Continue?`
+                        : `Activate ${confirmModal.user.username}'s account?`}
+                    confirmText={confirmModal.user.is_active ? "Suspend" : "Activate"}
+                    variant={confirmModal.user.is_active ? "warning" : "info"}
+                />
+            )}
         </div>
     );
 }
