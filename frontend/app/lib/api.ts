@@ -199,6 +199,13 @@ class ApiClient {
     return this.request<PaginatedResponse<RoomType>>('/room-types/');
   }
 
+  async updateRoomType(id: string, data: Partial<RoomType>) {
+    return this.request<RoomType>(`/room-types/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Guests
   async getGuests() {
     return this.request<PaginatedResponse<Guest>>('/guests/');

@@ -17,7 +17,8 @@ import {
     Wine,
     Shield,
     PlusCircle,
-    Sparkles
+    Sparkles,
+    Settings
 } from 'lucide-react';
 
 interface NavItem {
@@ -116,6 +117,7 @@ export default function Sidebar() {
                         <NavLink href="/analytics" label="Analytics" icon={<BarChart3 size={20} />} pathname={pathname} />
                         <NavLink href="/admin/users" label="User Management" icon={<Shield size={20} />} pathname={pathname} />
                         <NavLink href="/audit-log" label="Audit Log" icon={<FileClock size={20} />} pathname={pathname} />
+                        <NavLink href="/settings" label="Settings" icon={<Settings size={20} />} pathname={pathname} />
                     </div>
                 )}
 
@@ -159,8 +161,8 @@ function NavLink({ href, label, icon, pathname }: { href: string; label: string;
         <Link
             href={href}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${isActive
-                    ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                    : 'hover:bg-white/5 hover:text-white'
+                ? 'bg-champagne-gold text-white font-medium shadow-lg'
+                : 'hover:bg-white/5 hover:text-white'
                 }`}
         >
             <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
