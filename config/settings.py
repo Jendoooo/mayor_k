@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'bookings.apps.BookingsConfig',
     'finance.apps.FinanceConfig',
+    'inventory.apps.InventoryConfig',
 ]
 
 MIDDLEWARE = [

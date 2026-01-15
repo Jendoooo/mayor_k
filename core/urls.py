@@ -7,7 +7,7 @@ from core.views import (
     UserViewSet, SystemEventViewSet, RoomTypeViewSet, RoomViewSet,
     GuestViewSet, BookingViewSet, TransactionViewSet,
     ExpenseCategoryViewSet, ExpenseViewSet,
-    DashboardView, StakeholderDashboardView, RoomAnalyticsView,
+    DashboardView, StakeholderDashboardView, AnalyticsView,
     LoginView, LogoutView
 )
 
@@ -29,7 +29,7 @@ urlpatterns = [
     # Dashboard endpoints
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard/stakeholder/', StakeholderDashboardView.as_view(), name='stakeholder-dashboard'),
-    path('analytics/rooms/', RoomAnalyticsView.as_view(), name='room-analytics'),
+    path('analytics/rooms/', AnalyticsView.as_view(), name='room-analytics'),
     
     # Authentication
     # Authentication

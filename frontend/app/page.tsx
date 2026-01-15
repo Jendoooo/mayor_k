@@ -1,160 +1,128 @@
 'use client';
 
-import Link from 'next/link';
-import PublicNavbar from '@/app/components/PublicNavbar';
+import Navbar from './components/Navbar';
+import HeroSection from './components/HeroSection';
+import RoomHighlight from './components/RoomHighlight';
+import { Wifi, Tv, Coffee, Wind, Battery, Car, Utensils, ShieldCheck } from 'lucide-react';
 
-export default function LandingPage() {
+export default function Home() {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-      <PublicNavbar />
+    <main className="min-h-screen bg-warm-white">
+      <Navbar />
 
-      {/* Hero Section */}
-      <section style={{
-        paddingTop: '120px',
-        paddingBottom: '80px',
-        textAlign: 'center',
-        background: 'radial-gradient(circle at top center, #1e293b 0%, var(--color-bg-primary) 70%)',
-      }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 var(--space-lg)' }}>
-          <div className="badge badge-maintenance mb-md">Welcome to Mayor K. Guest Palace</div>
-          <h1 style={{
-            fontSize: 'var(--text-4xl)',
-            marginBottom: 'var(--space-lg)',
-            lineHeight: 1.2,
-            background: 'linear-gradient(to right, #fff, #94a3b8)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            Experience Comfort & Luxury in Epe
-          </h1>
-          <p className="text-secondary" style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-xl)', lineHeight: 1.6 }}>
-            Whether you need a short rest to recharge or a relaxing overnight stay,
-            Mayor K. Guest Palace offers premium hospitality tailored to your needs.
+      <HeroSection />
+
+      {/* Intro Section */}
+      <section className="py-20 md:py-32 px-4 bg-white relative overflow-hidden">
+        <div className="container mx-auto max-w-4xl text-center relative z-10">
+          <span className="text-champagne-gold uppercase tracking-[0.2em] font-bold text-sm">Welcome to Royalty</span>
+          <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-midnight-blue mt-6 mb-8 leading-tight">
+            A Sanctuary of <br /> Unmatched Elegance
+          </h2>
+          <p className="text-slate-600 text-lg leading-relaxed font-light">
+            Nestled in the serene landscapes of Epe, Mayor K. Guest Palace redefines luxury with
+            an infusion of traditional warmth. Whether you are here for a diplomatic retreat,
+            a business engagement, or a family getaway, our bespoke services and world-class
+            amenities ensure an unforgettable experience.
           </p>
-          <div className="flex justify-center gap-md">
-            <Link href="/book" className="btn btn-primary btn-lg">
-              Book a Room
-            </Link>
-            <Link href="#rooms" className="btn btn-outline btn-lg">
-              View Rates
-            </Link>
+          <div className="mt-12">
+            <button className="border border-midnight-blue text-midnight-blue px-8 py-3 uppercase tracking-widest text-xs font-bold hover:bg-midnight-blue hover:text-white transition-all duration-300">
+              Discover Our Story
+            </button>
           </div>
         </div>
+
+        {/* Subtle decorative elements */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-champagne-gold/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-midnight-blue/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
       </section>
 
-      {/* Features Grid */}
-      <section id="amenities" style={{ padding: '80px 0', background: 'var(--color-bg-secondary)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 var(--space-lg)' }}>
-          <h2 className="text-center mb-xl">Why Choose Us</h2>
-          <div className="grid grid-cols-3 gap-lg">
+      <RoomHighlight />
+
+      {/* Amenities Grid */}
+      <section className="py-24 bg-bg-secondary text-white">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-16">
+            <div>
+              <span className="text-champagne-gold uppercase tracking-widest text-sm font-bold">Amenities</span>
+              <h2 className="font-serif text-4xl mt-3">Curated for You</h2>
+            </div>
+            <button className="text-champagne-gold hover:text-white transition-colors mt-4 md:mt-0 underline decoration-1 underline-offset-8">
+              View All Facilities
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { title: '24/7 Power', icon: '⚡', desc: 'Uninterrupted power supply with standby generators.' },
-              { title: 'Secure Environment', icon: '🛡️', desc: 'Gated premises with 24-hour security personnel.' },
-              { title: 'Premium Bar', icon: '🍷', desc: 'Fully stocked bar with exotic wines and spirits.' },
-              { title: 'Short Rest', icon: '⏱️', desc: 'Flexible hourly rates for quick request.' },
-              { title: 'Ample Parking', icon: '🚗', desc: 'Spacious and secure parking for all guests.' },
-              { title: 'Smart TV', icon: '📺', desc: 'Entertainment systems in every room.' },
-            ].map((feature, i) => (
-              <div key={i} className="card" style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '40px', marginBottom: 'var(--space-md)' }}>{feature.icon}</div>
-                <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-sm)' }}>{feature.title}</h3>
-                <p className="text-secondary text-sm">{feature.desc}</p>
+              { icon: Wifi, title: "High-Speed WiFi", desc: "Seamless connectivity everywhere." },
+              { icon: Battery, title: "24/7 Power", desc: "Uninterrupted comfort guaranteed." },
+              { icon: Utensils, title: "Fine Dining", desc: "Local & Continental delicacies." },
+              { icon: ShieldCheck, title: "Top Security", desc: "Your safety is our priority." },
+              { icon: Car, title: "Ample Parking", desc: "Secure space for your vehicles." },
+              { icon: Tv, title: "Smart Entertainment", desc: "DSTV & Netflix in every room." },
+              { icon: Wind, title: "Climate Control", desc: "AC systems in all spaces." },
+              { icon: Coffee, title: "Executive Lounge", desc: "Relax with premium drinks." },
+            ].map((item, i) => (
+              <div key={i} className="p-6 border border-white/10 hover:border-champagne-gold/50 transition-colors group">
+                <item.icon className="text-champagne-gold mb-4 group-hover:scale-110 transition-transform duration-300" size={32} />
+                <h4 className="font-serif text-xl mb-2">{item.title}</h4>
+                <p className="text-slate-400 text-sm">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Rooms Showcase */}
-      <section id="rooms" style={{ padding: '80px 0' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 var(--space-lg)' }}>
-          <h2 className="text-center mb-xl">Our Pricing</h2>
-          <div className="grid grid-cols-3 gap-lg">
-            {/* Standard */}
-            <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-              <div style={{ height: '200px', background: '#334155', marginBottom: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-                {/* Image placeholder */}
-                <div className="flex items-center justify-center h-full text-secondary">standard-room.jpg</div>
-              </div>
-              <h3 className="mb-xs">Standard Room</h3>
-              <p className="text-secondary text-sm mb-lg">Perfect for solo travelers.</p>
-              <div className="flex justify-between items-center border-t border-b py-md mb-md" style={{ borderColor: 'var(--color-border)' }}>
-                <div>
-                  <div className="text-xs text-secondary">Short Rest</div>
-                  <div className="font-bold">₦5,000</div>
-                </div>
-                <div style={{ height: '20px', width: '1px', background: 'var(--color-border)' }}></div>
-                <div>
-                  <div className="text-xs text-secondary">Overnight</div>
-                  <div className="font-bold">₦12,000</div>
-                </div>
-              </div>
-              <Link href="/book?type=standard" className="btn btn-outline w-full">Select Room</Link>
-            </div>
-
-            {/* Deluxe */}
-            <div className="card" style={{ position: 'relative', overflow: 'hidden', borderColor: 'var(--color-primary)' }}>
-              <div className="badge badge-approved" style={{ position: 'absolute', top: 'var(--space-md)', right: 'var(--space-md)' }}>Popular</div>
-              <div style={{ height: '200px', background: '#334155', marginBottom: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-                {/* Image placeholder */}
-                <div className="flex items-center justify-center h-full text-secondary">deluxe-room.jpg</div>
-              </div>
-              <h3 className="mb-xs">Deluxe Room</h3>
-              <p className="text-secondary text-sm mb-lg">More space, more comfort.</p>
-              <div className="flex justify-between items-center border-t border-b py-md mb-md" style={{ borderColor: 'var(--color-border)' }}>
-                <div>
-                  <div className="text-xs text-secondary">Short Rest</div>
-                  <div className="font-bold">₦8,000</div>
-                </div>
-                <div style={{ height: '20px', width: '1px', background: 'var(--color-border)' }}></div>
-                <div>
-                  <div className="text-xs text-secondary">Overnight</div>
-                  <div className="font-bold">₦18,000</div>
-                </div>
-              </div>
-              <Link href="/book?type=deluxe" className="btn btn-primary w-full">Select Room</Link>
-            </div>
-
-            {/* VIP Suite */}
-            <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-              <div style={{ height: '200px', background: '#334155', marginBottom: 'var(--space-md)', borderRadius: 'var(--radius-md)' }}>
-                {/* Image placeholder */}
-                <div className="flex items-center justify-center h-full text-secondary">vip-suite.jpg</div>
-              </div>
-              <h3 className="mb-xs">VIP Suite</h3>
-              <p className="text-secondary text-sm mb-lg">Ultimate luxury experience.</p>
-              <div className="flex justify-between items-center border-t border-b py-md mb-md" style={{ borderColor: 'var(--color-border)' }}>
-                <div>
-                  <div className="text-xs text-secondary">Short Rest</div>
-                  <div className="font-bold">₦12,000</div>
-                </div>
-                <div style={{ height: '20px', width: '1px', background: 'var(--color-border)' }}></div>
-                <div>
-                  <div className="text-xs text-secondary">Overnight</div>
-                  <div className="font-bold">₦30,000</div>
-                </div>
-              </div>
-              <Link href="/book?type=vip" className="btn btn-outline w-full">Select Room</Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer style={{ padding: '60px 0', background: 'var(--color-bg-secondary)', borderTop: '1px solid var(--color-border)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 var(--space-lg)', textAlign: 'center' }}>
-          <div className="mb-lg">
-            <h3 className="mb-sm">Mayor K. Guest Palace</h3>
-            <p className="text-secondary">Epe, Lagos State</p>
+      <footer className="bg-midnight-blue border-t border-white/10 pt-20 pb-10 text-white">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div className="md:col-span-1">
+              <h3 className="font-serif text-2xl mb-6 text-white">Mayor K.</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                An oasis of luxury in Epe, Lagos. Experience the perfect blend of modern elegance and African hospitality.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-champagne-gold mb-6">Quick Links</h4>
+              <ul className="space-y-4 text-slate-300 text-sm">
+                <li><a href="#" className="hover:text-white transition-colors">Our Story</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Accommodations</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Dining</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Offers</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-champagne-gold mb-6">Contact</h4>
+              <ul className="space-y-4 text-slate-300 text-sm">
+                <li>123 Hospital Road, Epe, Lagos</li>
+                <li>reservations@mayorkpalace.com</li>
+                <li>+234 812 345 6789</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-champagne-gold mb-6">Newsletter</h4>
+              <p className="text-slate-400 text-sm mb-4">Subscribe for exclusive offers.</p>
+              <div className="flex">
+                <input type="email" placeholder="Your email" className="bg-white/5 border border-white/10 px-4 py-2 text-sm w-full focus:outline-none focus:border-champagne-gold transition-colors" />
+                <button className="bg-champagne-gold px-4 py-2 text-white font-bold text-sm uppercase">Join</button>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-center gap-lg mb-lg">
-            <Link href="/dashboard" className="text-sm text-muted hover:text-white">Staff Login</Link>
-            <Link href="#contact" className="text-sm text-muted hover:text-white">Contact Us</Link>
-            <Link href="#" className="text-sm text-muted hover:text-white">Privacy Policy</Link>
+
+          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
+            <p>&copy; {new Date().getFullYear()} Mayor K. Guest Palace. All rights reserved.</p>
+            <div className="flex gap-6 mt-4 md:mt-0">
+              <a href="#" className="hover:text-white">Privacy Policy</a>
+              <a href="#" className="hover:text-white">Terms of Service</a>
+              <a href="/login" className="hover:text-champagne-gold transition-colors">Staff Access</a>
+            </div>
           </div>
-          <p className="text-xs text-muted">© 2026 Mayor K. Guest Palace. All rights reserved.</p>
         </div>
       </footer>
-    </div>
+    </main>
   );
 }

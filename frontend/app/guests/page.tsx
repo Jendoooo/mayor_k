@@ -1,37 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { Guest } from '@/app/lib/api';
-
-// Mock data
-const mockGuests: Guest[] = [
-    {
-        id: '1',
-        name: 'Adeola Johnson',
-        phone: '08034567890',
-        email: 'adeola@example.com',
-        notes: 'Likes quiet rooms',
-        is_blocked: false,
-        total_stays: 5,
-        total_spent: '75000',
-        created_at: '2025-12-10T10:00:00',
-    },
-    {
-        id: '2',
-        name: 'Chukwudi Okonkwo',
-        phone: '08098765432',
-        email: '',
-        notes: '',
-        is_blocked: false,
-        total_stays: 2,
-        total_spent: '10000',
-        created_at: '2026-01-05T14:20:00',
-    },
-];
+import { useState, useEffect } from 'react';
+import api, { Guest } from '@/app/lib/api';
+import GuestHistoryModal from '../components/GuestHistoryModal';
+import { Eye } from 'lucide-react';
 
 export default function GuestsPage() {
-    const [guests] = useState<Guest[]>(mockGuests);
+    const [guests, setGuests] = useState<Guest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+
+    useEffect(() => {
+        console.log('[Guests] Fetching guests from API...');
+        api.getGuests()
+            .then(response => {
+                console.log('[Guests] API Response:', response);
+                console.log('[Guests] Results array:', response.results);
+                console.log('[Guests] Results length:', response.results?.length);
+                setGuests(response.results || []);
+            })
+            .catch(err => {
+                console.error('[Guests] API Error:', err);
+            })
+            .finally(() => {
+                console.log('[Guests] Loading complete');
+                setIsLoading(false);
+            });
+    }, []);
+
+    if (isLoading) {
+        return <div className="p-xl text-center">Loading guests...</div>;
+    }
 
     const filteredGuests = guests.filter(g =>
         g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,8 +70,10 @@ export default function GuestsPage() {
                                 <th>Phone</th>
                                 <th>Total Stays</th>
                                 <th>Total Spent</th>
+                                <th>Last Visit</th>
                                 <th>Status</th>
                                 <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -81,6 +83,12 @@ export default function GuestsPage() {
                                     <td>{guest.phone}</td>
                                     <td>{guest.total_stays}</td>
                                     <td>₦{parseFloat(guest.total_spent).toLocaleString()}</td>
+                                    <td className="text-sm text-secondary">
+                                        {guest.last_visit
+                                            ? new Date(guest.last_visit).toLocaleDateString()
+                                            : <span className="italic opacity-50">Never</span>
+                                        }
+                                    </td>
                                     <td>
                                         {guest.is_blocked ? (
                                             <span className="badge badge-rejected">Blocked</span>
@@ -89,12 +97,29 @@ export default function GuestsPage() {
                                         )}
                                     </td>
                                     <td className="text-sm text-secondary">{guest.notes}</td>
+                                    <td>
+                                        <button
+                                            className="btn btn-outline btn-sm flex items-center gap-xs"
+                                            onClick={() => setSelectedGuest(guest)}
+                                        >
+                                            <Eye size={14} />
+                                            History
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            {selectedGuest && (
+                <GuestHistoryModal
+                    guestId={selectedGuest.id}
+                    guestName={selectedGuest.name}
+                    onClose={() => setSelectedGuest(null)}
+                />
+            )}
         </div>
     );
 }

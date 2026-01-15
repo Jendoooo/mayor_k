@@ -2,11 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import api, { Booking } from '@/app/lib/api';
+import BookingDetailModal from '../components/BookingDetailModal';
+import { exportToCSV } from '@/app/lib/utils';
+import { Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function BookingsPage() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
+
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
     useEffect(() => {
         fetchBookings();
@@ -36,6 +42,23 @@ export default function BookingsPage() {
         );
     }
 
+    const handleExport = () => {
+        const dataToExport = filteredBookings.map(booking => ({
+            "Reference": booking.booking_ref,
+            "Guest Name": booking.guest_name,
+            "Room Number": booking.room_number,
+            "Type": booking.stay_type_display,
+            "Check In": booking.check_in_date,
+            "Check Out": booking.actual_checkout || booking.expected_checkout,
+            "Status": booking.status_display,
+            "Total Amount": booking.total_amount,
+            "Balance Due": booking.balance_due,
+            "Payment Status": booking.is_fully_paid ? "Paid" : "Pending"
+        }));
+        exportToCSV(dataToExport, `bookings_export_${filter.toLowerCase()}_${new Date().toISOString().split('T')[0]}`);
+        toast.success("Bookings exported successfully");
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-lg">
@@ -43,9 +66,18 @@ export default function BookingsPage() {
                     <h1>Bookings</h1>
                     <p className="text-secondary">Manage reservations and check-ins</p>
                 </div>
-                <button className="btn btn-primary">
-                    + New Booking
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleExport}
+                        className="btn btn-outline flex items-center gap-2"
+                    >
+                        <Download size={18} />
+                        Export CSV
+                    </button>
+                    <button className="btn btn-primary">
+                        + New Booking
+                    </button>
+                </div>
             </div>
 
             <div className="card">
@@ -90,6 +122,7 @@ export default function BookingsPage() {
                                     <th>Room</th>
                                     <th>Type</th>
                                     <th>Check In</th>
+                                    <th>Check Out</th>
                                     <th>Status</th>
                                     <th>Payment</th>
                                     <th>Actions</th>
@@ -108,6 +141,16 @@ export default function BookingsPage() {
                                         <td>
                                             <div>{booking.check_in_date}</div>
                                             <div className="text-secondary text-xs">{booking.check_in_time ? booking.check_in_time.substring(0, 5) : '--:--'}</div>
+                                        </td>
+                                        <td className="text-sm">
+                                            {booking.actual_checkout ? (
+                                                <div className="text-secondary">
+                                                    <div>{new Date(booking.actual_checkout).toLocaleDateString()}</div>
+                                                    <div className="text-xs">{new Date(booking.actual_checkout).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-secondary opacity-50">-</span>
+                                            )}
                                         </td>
                                         <td>
                                             <span className={`badge ${booking.status === 'CHECKED_IN' ? 'badge-occupied' :
@@ -128,7 +171,11 @@ export default function BookingsPage() {
                                             )}
                                         </td>
                                         <td>
-                                            <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px' }}>
+                                            <button
+                                                className="btn btn-outline"
+                                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                                                onClick={() => setSelectedBooking(booking)}
+                                            >
                                                 View
                                             </button>
                                         </td>
@@ -139,6 +186,13 @@ export default function BookingsPage() {
                     )}
                 </div>
             </div>
+
+            {selectedBooking && (
+                <BookingDetailModal
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                />
+            )}
         </div>
     );
 }

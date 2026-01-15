@@ -12,6 +12,7 @@ urlpatterns = [
     
     # API v1
     path('api/v1/', include('core.urls')),
+    path('api/v1/inventory/', include('inventory.urls')),
 ]
 
 # Serve media files in development

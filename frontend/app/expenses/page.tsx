@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import api, { Expense } from '@/app/lib/api';
 import { useAuth } from '@/app/context/AuthContext';
 import LogExpenseModal from '@/app/components/LogExpenseModal';
+import { exportToCSV } from '@/app/lib/utils';
+import { Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function ExpensesPage() {
     const { user } = useAuth();
@@ -61,6 +64,21 @@ export default function ExpensesPage() {
         );
     }
 
+    const handleExport = () => {
+        const dataToExport = expenses.map(exp => ({
+            "Ref": exp.expense_ref,
+            "Category": exp.category_name,
+            "Description": exp.description,
+            "Vendor": exp.vendor_name || '-',
+            "Amount": exp.amount,
+            "Status": exp.status_display,
+            "Logged By": exp.logged_by_name,
+            "Date": exp.expense_date
+        }));
+        exportToCSV(dataToExport, `expenses_export_${new Date().toISOString().split('T')[0]}`);
+        toast.success("Expenses exported successfully");
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-lg">
@@ -68,12 +86,21 @@ export default function ExpensesPage() {
                     <h1>Expenses</h1>
                     <p className="text-secondary">Track operational costs and approvals</p>
                 </div>
-                <button
-                    className="btn btn-warning"
-                    onClick={() => setIsLogModalOpen(true)}
-                >
-                    + Log Expense
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleExport}
+                        className="btn btn-outline flex items-center gap-2"
+                    >
+                        <Download size={18} />
+                        Export CSV
+                    </button>
+                    <button
+                        className="btn btn-warning"
+                        onClick={() => setIsLogModalOpen(true)}
+                    >
+                        + Log Expense
+                    </button>
+                </div>
             </div>
 
             <div className="card">

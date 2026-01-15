@@ -1,4 +1,4 @@
-import Sidebar from '@/app/components/Sidebar';
+import ProtectedLayout from '@/app/components/ProtectedLayout';
 
 export default function TransactionsLayout({
     children,
@@ -6,11 +6,8 @@ export default function TransactionsLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="layout">
-            <Sidebar />
-            <main className="main-content">
-                {children}
-            </main>
-        </div>
+        <ProtectedLayout>
+            {children}
+        </ProtectedLayout>
     );
 }

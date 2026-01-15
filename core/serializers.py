@@ -1,6 +1,8 @@
 """
 API Serializers for Mayor K. Guest Palace.
 """
+from decimal import Decimal
+from django.db.models import Sum
 from rest_framework import serializers
 from django.utils import timezone
 from core.models import User, SystemEvent
@@ -12,12 +14,34 @@ from finance.models import Transaction, ExpenseCategory, Expense
 
 class UserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)
+    full_name = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
-                  'role', 'role_display', 'phone', 'is_active']
-        read_only_fields = ['id', 'role_display']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name',
+                  'role', 'role_display', 'phone', 'is_active', 'last_login', 'password']
+        read_only_fields = ['id', 'role_display', 'last_login', 'full_name']
+        
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 class SystemEventSerializer(serializers.ModelSerializer):
@@ -49,11 +73,25 @@ class RoomSerializer(serializers.ModelSerializer):
     state_display = serializers.CharField(source='get_current_state_display', read_only=True)
     current_booking_id = serializers.SerializerMethodField()
     booking_stay_info = serializers.SerializerMethodField()
+    # Add rate fields from room_type for QuickBook modal
+    overnight_rate = serializers.DecimalField(
+        source='room_type.base_rate_overnight', 
+        max_digits=10, decimal_places=2, read_only=True
+    )
+    short_rest_rate = serializers.DecimalField(
+        source='room_type.base_rate_short_rest', 
+        max_digits=10, decimal_places=2, read_only=True
+    )
+    price = serializers.DecimalField(
+        source='room_type.base_rate_overnight', 
+        max_digits=10, decimal_places=2, read_only=True
+    )
     
     class Meta:
         model = Room
         fields = ['id', 'room_number', 'room_type', 'room_type_name', 'floor',
                   'current_state', 'state_display', 'notes', 'is_active', 'is_available',
+                  'overnight_rate', 'short_rest_rate', 'price',
                   'current_booking_id', 'booking_stay_info']
 
     def get_current_booking_id(self, obj):
@@ -105,11 +143,33 @@ class RoomAvailabilitySerializer(serializers.ModelSerializer):
 
 
 class GuestSerializer(serializers.ModelSerializer):
+    total_stays = serializers.SerializerMethodField()
+    total_spent = serializers.SerializerMethodField()
+    last_visit = serializers.SerializerMethodField()
+    
     class Meta:
         model = Guest
         fields = ['id', 'name', 'phone', 'email', 'notes', 'is_blocked',
-                  'total_stays', 'total_spent', 'created_at']
-        read_only_fields = ['id', 'total_stays', 'total_spent', 'created_at']
+                  'total_stays', 'total_spent', 'last_visit', 'created_at']
+        read_only_fields = ['id', 'total_stays', 'total_spent', 'last_visit', 'created_at']
+    
+    def get_total_stays(self, obj):
+        """Count completed bookings for this guest."""
+        return obj.bookings.filter(status=Booking.Status.CHECKED_OUT).count()
+    
+    def get_total_spent(self, obj):
+        """Sum of all payments from this guest."""
+        total = obj.bookings.filter(
+            status=Booking.Status.CHECKED_OUT
+        ).aggregate(total=Sum('amount_paid'))['total']
+        return total or Decimal('0.00')
+    
+    def get_last_visit(self, obj):
+        """Most recent checkout date."""
+        last_booking = obj.bookings.filter(
+            status=Booking.Status.CHECKED_OUT
+        ).order_by('-actual_checkout').first()
+        return last_booking.actual_checkout if last_booking else None
 
 
 class GuestCreateSerializer(serializers.ModelSerializer):
@@ -126,7 +186,13 @@ class BookingSerializer(serializers.ModelSerializer):
     room_type = serializers.CharField(source='room.room_type.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     stay_type_display = serializers.CharField(source='get_stay_type_display', read_only=True)
+    
+    # Financials
+    total_room_charges = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total_bar_charges = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    grand_total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     balance_due = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    
     is_fully_paid = serializers.BooleanField(read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     
@@ -137,7 +203,9 @@ class BookingSerializer(serializers.ModelSerializer):
             'room', 'room_number', 'room_type', 'stay_type', 'stay_type_display',
             'status', 'status_display', 'source', 'check_in_date', 'check_in_time',
             'expected_checkout', 'actual_checkout', 'num_nights', 'num_guests',
-            'room_rate', 'total_amount', 'amount_paid', 'balance_due', 'is_fully_paid',
+            'room_rate', 'total_amount', 'amount_paid', 
+            'total_room_charges', 'total_bar_charges', 'grand_total', 'balance_due',
+            'is_fully_paid',
             'discount_amount', 'discount_reason', 'is_complimentary', 
             'complimentary_reason', 'notes', 'created_by', 'created_by_name',
             'created_at', 'updated_at'

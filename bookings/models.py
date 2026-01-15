@@ -281,9 +281,30 @@ class Booking(models.Model):
         return f"{self.booking_ref} - {self.guest.name} in Room {self.room.room_number}"
     
     @property
+    def total_room_charges(self):
+        """Base room charge + extensions"""
+        # TODO: Add logic for extension charges if separate
+        return self.total_amount
+
+    @property
+    def total_bar_charges(self):
+        """Sum of all bar orders linked to this booking"""
+        # Sum all related orders
+        # Note: Importing Order here might cause circular import if not careful, 
+        # but since Order depends on Booking via ForeignKey, we can access via related_name
+        bar_total = self.bar_orders.aggregate(total=models.Sum('total_amount'))['total']
+        return bar_total or Decimal('0.00')
+
+    @property
+    def grand_total(self):
+        """Room + Bar + Services"""
+        return self.total_room_charges + self.total_bar_charges
+
+    @property
     def balance_due(self):
-        return self.total_amount - self.amount_paid - self.discount_amount
-    
+        """Total to pay"""
+        return self.grand_total - self.amount_paid - self.discount_amount
+
     @property
     def is_fully_paid(self):
         return self.balance_due <= Decimal('0.00')
