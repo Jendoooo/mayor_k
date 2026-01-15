@@ -154,22 +154,29 @@ class GuestSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'total_stays', 'total_spent', 'last_visit', 'created_at']
     
     def get_total_stays(self, obj):
-        """Count completed bookings for this guest."""
-        return obj.bookings.filter(status=Booking.Status.CHECKED_OUT).count()
+        """Count all completed and active bookings for this guest."""
+        return obj.bookings.filter(
+            status__in=[Booking.Status.CHECKED_IN, Booking.Status.CHECKED_OUT]
+        ).count()
     
     def get_total_spent(self, obj):
-        """Sum of all payments from this guest."""
+        """Sum of all payments from this guest (both current and past stays)."""
         total = obj.bookings.filter(
-            status=Booking.Status.CHECKED_OUT
+            status__in=[Booking.Status.CHECKED_IN, Booking.Status.CHECKED_OUT]
         ).aggregate(total=Sum('amount_paid'))['total']
         return total or Decimal('0.00')
     
     def get_last_visit(self, obj):
-        """Most recent checkout date."""
+        """Most recent check-in or checkout date."""
+        # First try checked-out bookings
         last_booking = obj.bookings.filter(
             status=Booking.Status.CHECKED_OUT
         ).order_by('-actual_checkout').first()
-        return last_booking.actual_checkout if last_booking else None
+        if last_booking and last_booking.actual_checkout:
+            return last_booking.actual_checkout
+        # Fall back to most recent check-in
+        last_booking = obj.bookings.order_by('-check_in_date').first()
+        return last_booking.check_in_date if last_booking else None
 
 
 class GuestCreateSerializer(serializers.ModelSerializer):

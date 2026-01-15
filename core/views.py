@@ -277,7 +277,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.select_related('guest', 'room', 'room__room_type', 'created_by').all()
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['status', 'stay_type', 'source', 'room']
+    filterset_fields = ['status', 'stay_type', 'source', 'room', 'guest']
     search_fields = ['booking_ref', 'guest__name', 'guest__phone', 'room__room_number']
     ordering_fields = ['check_in_date', 'created_at', 'total_amount']
     
