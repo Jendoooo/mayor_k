@@ -13,11 +13,11 @@ import {
     BarChart3,
     FileClock,
     LogOut,
-    Utensils,
-    Settings,
-    Shield,
     Package,
-    Wine
+    Wine,
+    Shield,
+    PlusCircle,
+    Sparkles
 } from 'lucide-react';
 
 interface NavItem {
@@ -26,78 +26,31 @@ interface NavItem {
     icon: React.ReactNode;
 }
 
-const mainNavItems: NavItem[] = [
-    {
-        href: '/dashboard',
-        label: 'Dashboard',
-        icon: <LayoutDashboard size={20} />,
-    },
-    {
-        href: '/rooms',
-        label: 'Rooms',
-        icon: <BedDouble size={20} />,
-    },
-    {
-        href: '/bookings',
-        label: 'Bookings',
-        icon: <CalendarDays size={20} />,
-    },
-    {
-        href: '/guests',
-        label: 'Guests',
-        icon: <Users size={20} />,
-    },
-];
-
-const financeNavItems: NavItem[] = [
-    {
-        href: '/transactions',
-        label: 'Transactions',
-        icon: <Receipt size={20} />,
-    },
-    {
-        href: '/expenses',
-        label: 'Expenses',
-        icon: <CreditCard size={20} />,
-    },
-];
-
-const adminNavItems: NavItem[] = [
-    {
-        href: '/analytics',
-        label: 'Analytics',
-        icon: <BarChart3 size={20} />,
-    },
-    {
-        href: '/admin/users',
-        label: 'User Management',
-        icon: <Shield size={20} />,
-    },
-    {
-        href: '/audit-log',
-        label: 'Audit Log',
-        icon: <FileClock size={20} />,
-    },
-];
-
-const inventoryNavItems: NavItem[] = [
-    {
-        href: '/inventory',
-        label: 'Inventory',
-        icon: <Package size={20} />,
-    },
-    {
-        href: '/bar',
-        label: 'Bar Point of Sale',
-        icon: <Wine size={20} />,
-    },
-];
+// Role permission helpers
+const canManageRooms = (role: string) => ['RECEPTIONIST', 'HOUSEKEEPING', 'MANAGER', 'ADMIN'].includes(role);
+const canMakeBookings = (role: string) => ['RECEPTIONIST', 'MANAGER', 'ADMIN'].includes(role);
+const canUsePOS = (role: string) => ['RECEPTIONIST', 'BAR_STAFF', 'MANAGER', 'ADMIN'].includes(role);
+const canViewFinance = (role: string) => ['ACCOUNTANT', 'MANAGER', 'STAKEHOLDER', 'ADMIN'].includes(role);
+const canSubmitExpense = (role: string) => ['RECEPTIONIST', 'HOUSEKEEPING', 'BAR_STAFF', 'MANAGER', 'ADMIN'].includes(role);
+const canManageInventory = (role: string) => ['MANAGER', 'ADMIN'].includes(role);
+const isAdmin = (role: string) => role === 'ADMIN';
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const pathname = usePathname();
 
     if (!user) return null;
+    const role = user.role;
+
+    // Define which sections each role can see
+    const showRooms = canManageRooms(role);
+    const showBookings = canMakeBookings(role);
+    const showGuests = canMakeBookings(role);
+    const showBarPOS = canUsePOS(role);
+    const showInventory = canManageInventory(role);
+    const showFinance = canViewFinance(role);
+    const showSubmitExpense = canSubmitExpense(role);
+    const showAdmin = isAdmin(role);
 
     return (
         <aside className="fixed left-0 top-0 bottom-0 w-64 bg-midnight-blue border-r border-white/10 flex flex-col z-40 text-slate-300 shadow-2xl">
@@ -108,122 +61,126 @@ export default function Sidebar() {
                 </div>
             </div>
 
-            <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-8 custom-scrollbar">
+            <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-6 custom-scrollbar">
 
+                {/* Main Section - Dashboard is for everyone */}
                 <div className="space-y-1">
                     <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Main</div>
-                    {mainNavItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${pathname === item.href
-                                    ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                                    : 'hover:bg-white/5 hover:text-white'
-                                }`}
-                        >
-                            <span className={pathname === item.href ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
-                                {item.icon}
-                            </span>
-                            <span>{item.label}</span>
-                        </Link>
-                    ))}
-                </div>
+                    <NavLink href="/dashboard" label="Dashboard" icon={<LayoutDashboard size={20} />} pathname={pathname} />
 
-                <div className="space-y-1">
-                    <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Bar & Service</div>
-                    {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
-                        <Link
-                            href="/inventory"
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${pathname === '/inventory'
-                                    ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                                    : 'hover:bg-white/5 hover:text-white'
-                                }`}
-                        >
-                            <span className={pathname === '/inventory' ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
-                                <Package size={20} />
-                            </span>
-                            <span>Inventory</span>
-                        </Link>
+                    {showRooms && (
+                        <NavLink href="/rooms" label="Rooms" icon={<BedDouble size={20} />} pathname={pathname} />
                     )}
-                    <Link
-                        href="/bar"
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${pathname === '/bar'
-                                ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                                : 'hover:bg-white/5 hover:text-white'
-                            }`}
-                    >
-                        <span className={pathname === '/bar' ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
-                            <Wine size={20} />
-                        </span>
-                        <span>Bar POS</span>
-                    </Link>
+                    {showBookings && (
+                        <NavLink href="/bookings" label="Bookings" icon={<CalendarDays size={20} />} pathname={pathname} />
+                    )}
+                    {showGuests && (
+                        <NavLink href="/guests" label="Guests" icon={<Users size={20} />} pathname={pathname} />
+                    )}
                 </div>
 
-                {(user.role === 'MANAGER' || user.role === 'ADMIN' || user.role === 'STAKEHOLDER') && (
+                {/* Bar & Service Section */}
+                {(showBarPOS || showInventory) && (
+                    <div className="space-y-1">
+                        <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Bar & Service</div>
+                        {showInventory && (
+                            <NavLink href="/inventory" label="Inventory" icon={<Package size={20} />} pathname={pathname} />
+                        )}
+                        {showBarPOS && (
+                            <NavLink href="/bar" label="Bar POS" icon={<Wine size={20} />} pathname={pathname} />
+                        )}
+                    </div>
+                )}
+
+                {/* Staff Actions - Submit Expense for eligible staff */}
+                {showSubmitExpense && !showFinance && (
+                    <div className="space-y-1">
+                        <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Staff Actions</div>
+                        <NavLink href="/expenses/new" label="Submit Expense" icon={<PlusCircle size={20} />} pathname={pathname} />
+                    </div>
+                )}
+
+                {/* Finance Section - For those with finance access */}
+                {showFinance && (
                     <div className="space-y-1">
                         <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Finance</div>
-                        {financeNavItems.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${pathname === item.href
-                                        ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                                        : 'hover:bg-white/5 hover:text-white'
-                                    }`}
-                            >
-                                <span className={pathname === item.href ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
-                                    {item.icon}
-                                </span>
-                                <span>{item.label}</span>
-                            </Link>
-                        ))}
+                        <NavLink href="/transactions" label="Transactions" icon={<Receipt size={20} />} pathname={pathname} />
+                        <NavLink href="/expenses" label="Expenses" icon={<CreditCard size={20} />} pathname={pathname} />
                     </div>
                 )}
 
-                {user.role === 'ADMIN' && (
+                {/* Admin Section */}
+                {showAdmin && (
                     <div className="space-y-1">
-                        <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Admin</div>
-                        {adminNavItems.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${pathname === item.href
-                                        ? 'bg-champagne-gold text-white font-medium shadow-lg'
-                                        : 'hover:bg-white/5 hover:text-white'
-                                    }`}
-                            >
-                                <span className={pathname === item.href ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
-                                    {item.icon}
-                                </span>
-                                <span>{item.label}</span>
-                            </Link>
-                        ))}
+                        <div className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-champagne-gold mb-2 opacity-80">Administration</div>
+                        <NavLink href="/analytics" label="Analytics" icon={<BarChart3 size={20} />} pathname={pathname} />
+                        <NavLink href="/admin/users" label="User Management" icon={<Shield size={20} />} pathname={pathname} />
+                        <NavLink href="/audit-log" label="Audit Log" icon={<FileClock size={20} />} pathname={pathname} />
                     </div>
                 )}
+
             </nav>
 
-            <div className="border-t border-white/10 p-4 bg-midnight-blue/50">
-                <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-champagne-gold border border-white/5 font-bold text-lg">
-                        {user.first_name?.[0] || user.username[0]}
+            {/* User Section */}
+            <div className="p-4 border-t border-white/10 bg-midnight-blue/50">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-champagne-gold/20 to-champagne-gold/5 border border-champagne-gold/30 flex items-center justify-center">
+                        <span className="text-champagne-gold font-bold text-sm">
+                            {user.first_name?.[0] || user.username?.[0] || 'U'}
+                        </span>
                     </div>
-                    <div className="overflow-hidden">
-                        <div className="text-sm font-semibold truncate text-white">
+                    <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white text-sm truncate">
                             {user.first_name || user.username}
                         </div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400 truncate">
-                            {user.role}
+                        <div className="text-xs text-champagne-gold/80 flex items-center gap-1">
+                            <Sparkles size={10} />
+                            {formatRole(user.role)}
                         </div>
                     </div>
                 </div>
                 <button
                     onClick={logout}
-                    className="flex w-full items-center gap-2 justify-center px-4 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-sm font-medium"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm bg-red-900/20 border border-red-500/20 text-red-400 hover:bg-red-900/30 hover:border-red-500/40 transition-all"
                 >
                     <LogOut size={16} />
-                    <span>Sign Out</span>
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>
     );
+}
+
+// Helper component for nav links
+function NavLink({ href, label, icon, pathname }: { href: string; label: string; icon: React.ReactNode; pathname: string }) {
+    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+
+    return (
+        <Link
+            href={href}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${isActive
+                    ? 'bg-champagne-gold text-white font-medium shadow-lg'
+                    : 'hover:bg-white/5 hover:text-white'
+                }`}
+        >
+            <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}>
+                {icon}
+            </span>
+            <span>{label}</span>
+        </Link>
+    );
+}
+
+// Format role for display
+function formatRole(role: string): string {
+    const roleMap: Record<string, string> = {
+        'RECEPTIONIST': 'Receptionist',
+        'HOUSEKEEPING': 'Housekeeping',
+        'BAR_STAFF': 'Bar Staff',
+        'ACCOUNTANT': 'Accountant',
+        'MANAGER': 'Manager',
+        'STAKEHOLDER': 'Stakeholder',
+        'ADMIN': 'Administrator',
+    };
+    return roleMap[role] || role;
 }

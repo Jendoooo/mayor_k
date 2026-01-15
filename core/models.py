@@ -10,9 +10,21 @@ from django.db import models
 class User(AbstractUser):
     """
     Custom user model with role-based access control.
+    
+    Role Hierarchy:
+    - RECEPTIONIST: Front desk operations, bookings, Bar POS
+    - HOUSEKEEPING: Room status management (clean/dirty)
+    - BAR_STAFF: Bar POS only
+    - ACCOUNTANT: Financial reports, no approvals
+    - MANAGER: All operations + expense approval (≤₦100k)
+    - STAKEHOLDER: Read-only financial dashboard
+    - ADMIN: Full access including audit logs
     """
     class Role(models.TextChoices):
         RECEPTIONIST = 'RECEPTIONIST', 'Receptionist'
+        HOUSEKEEPING = 'HOUSEKEEPING', 'Housekeeping'
+        BAR_STAFF = 'BAR_STAFF', 'Bar Staff'
+        ACCOUNTANT = 'ACCOUNTANT', 'Accountant'
         MANAGER = 'MANAGER', 'Manager'
         STAKEHOLDER = 'STAKEHOLDER', 'Stakeholder'
         ADMIN = 'ADMIN', 'Admin'
@@ -45,7 +57,58 @@ class User(AbstractUser):
     
     @property
     def can_approve_expenses(self):
+        """Only Manager and Admin can approve expenses."""
         return self.role in [self.Role.MANAGER, self.Role.ADMIN]
+    
+    @property
+    def can_submit_expenses(self):
+        """Staff who can submit expense requests (all except Stakeholder and Accountant)."""
+        return self.role in [
+            self.Role.RECEPTIONIST, 
+            self.Role.HOUSEKEEPING, 
+            self.Role.BAR_STAFF,
+            self.Role.MANAGER, 
+            self.Role.ADMIN
+        ]
+    
+    @property
+    def can_view_finance(self):
+        """Staff who can view financial reports."""
+        return self.role in [
+            self.Role.ACCOUNTANT,
+            self.Role.MANAGER, 
+            self.Role.STAKEHOLDER,
+            self.Role.ADMIN
+        ]
+    
+    @property
+    def can_manage_rooms(self):
+        """Staff who can manage room status."""
+        return self.role in [
+            self.Role.RECEPTIONIST,
+            self.Role.HOUSEKEEPING,
+            self.Role.MANAGER, 
+            self.Role.ADMIN
+        ]
+    
+    @property
+    def can_use_bar_pos(self):
+        """Staff who can use the Bar POS system."""
+        return self.role in [
+            self.Role.RECEPTIONIST,
+            self.Role.BAR_STAFF,
+            self.Role.MANAGER, 
+            self.Role.ADMIN
+        ]
+    
+    @property
+    def can_make_bookings(self):
+        """Staff who can create/manage bookings."""
+        return self.role in [
+            self.Role.RECEPTIONIST,
+            self.Role.MANAGER, 
+            self.Role.ADMIN
+        ]
 
 
 class SystemEvent(models.Model):

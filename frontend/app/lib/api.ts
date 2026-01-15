@@ -372,7 +372,7 @@ export interface User {
   first_name: string;
   last_name: string;
   full_name: string;
-  role: 'RECEPTIONIST' | 'MANAGER' | 'STAKEHOLDER' | 'ADMIN';
+  role: 'RECEPTIONIST' | 'HOUSEKEEPING' | 'BAR_STAFF' | 'ACCOUNTANT' | 'MANAGER' | 'STAKEHOLDER' | 'ADMIN';
   role_display: string;
   phone: string;
   is_active: boolean;
@@ -541,6 +541,15 @@ export interface ExpenseCategory {
   name: string;
   description: string;
   is_active: boolean;
+}
+
+export interface CreateExpenseData {
+  category: string;
+  amount: number;
+  description: string;
+  vendor_name?: string;
+  expense_date: string;
+  notes?: string;
 }
 
 export interface RoomAnalytics {
