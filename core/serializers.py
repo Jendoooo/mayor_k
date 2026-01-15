@@ -47,11 +47,22 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 class RoomSerializer(serializers.ModelSerializer):
     room_type_name = serializers.CharField(source='room_type.name', read_only=True)
     state_display = serializers.CharField(source='get_current_state_display', read_only=True)
+    current_booking_id = serializers.SerializerMethodField()
     
     class Meta:
         model = Room
         fields = ['id', 'room_number', 'room_type', 'room_type_name', 'floor',
-                  'current_state', 'state_display', 'notes', 'is_active', 'is_available']
+                  'current_state', 'state_display', 'notes', 'is_active', 'is_available',
+                  'current_booking_id']
+
+    def get_current_booking_id(self, obj):
+        if obj.current_state == 'OCCUPIED':
+            booking = Booking.objects.filter(
+                room=obj, 
+                status=Booking.Status.CHECKED_IN
+            ).order_by('-check_in_date', '-created_at').first()
+            return booking.id if booking else None
+        return None
 
 
 class RoomAvailabilitySerializer(serializers.ModelSerializer):

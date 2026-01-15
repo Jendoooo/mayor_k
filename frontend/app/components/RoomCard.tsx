@@ -1,6 +1,7 @@
 'use client';
 
 import { Room } from '@/app/lib/api';
+import { User, ShieldAlert, Sparkles, Wrench } from 'lucide-react';
 
 interface RoomCardProps {
     room: Room;
@@ -15,25 +16,48 @@ const stateClasses: Record<string, string> = {
     MAINTENANCE: 'maintenance',
 };
 
+// Map room types to short codes if needed, or use full names
 const typeAbbreviations: Record<string, string> = {
     'Standard': 'STD',
     'Deluxe': 'DLX',
     'VIP Suite': 'VIP',
+    'Executive': 'EXEC',
 };
 
 export default function RoomCard({ room, onClick }: RoomCardProps) {
     const stateClass = stateClasses[room.current_state] || 'available';
-    const typeAbbr = typeAbbreviations[room.room_type_name] || room.room_type_name.slice(0, 3).toUpperCase();
+    const typeAbbr = typeAbbreviations[room.room_type_name] || room.room_type_name.slice(0, 4).toUpperCase();
+
+    // Determine icon based on state
+    const StatusIcon = () => {
+        if (room.current_state === 'OCCUPIED') return <User size={16} className="text-warning opacity-50" />;
+        if (room.current_state === 'DIRTY') return <Sparkles size={16} className="text-danger opacity-50" />;
+        if (room.current_state === 'MAINTENANCE') return <Wrench size={16} className="text-maintenance opacity-50" />;
+        return null;
+    };
 
     return (
         <div
             className={`room-card ${stateClass}`}
             onClick={() => onClick?.(room)}
+            role="button"
+            tabIndex={0}
             title={`${room.room_number} - ${room.room_type_name} (${room.state_display})`}
         >
-            <div className="room-status-dot"></div>
-            <div className="room-number">{room.room_number}</div>
-            <div className="room-type">{typeAbbr}</div>
+            <div className="flex flex-col items-center justify-center relative w-full h-full">
+                {/* Status Dot */}
+                <div className="room-status-dot"></div>
+
+                {/* Optional: Icon indicator in top-left */}
+                <div className="absolute top-2 left-2">
+                    <StatusIcon />
+                </div>
+
+                <div className="room-number mb-1">{room.room_number}</div>
+                <div className="room-type px-2 py-0.5 rounded bg-black/20 text-[10px] tracking-wider font-medium">
+                    {typeAbbr}
+                </div>
+            </div>
         </div>
     );
 }
@@ -53,7 +77,7 @@ export function RoomGrid({ rooms, onRoomClick, filterState }: RoomGridProps) {
     return (
         <div className="room-grid">
             {filteredRooms.map((room) => (
-                <RoomCard key={room.id} room={room} onClick={onRoomClick} />
+                <RoomCard key={room.id} room={room} onClick={() => onRoomClick?.(room)} />
             ))}
         </div>
     );
@@ -69,18 +93,17 @@ export function RoomLegend() {
     ];
 
     return (
-        <div className="flex gap-lg" style={{ marginBottom: 'var(--space-lg)' }}>
+        <div className="flex flex-wrap gap-md mb-lg p-sm bg-bg-secondary rounded-lg border border-border">
             {statuses.map((status) => (
                 <div key={status.class} className="flex items-center gap-sm">
                     <div
+                        className={`w-3 h-3 rounded-full bg-${status.class === 'dirty' ? 'danger' : status.class === 'occupied' ? 'warning' : status.class === 'maintenance' ? 'maintenance' : 'success'}`}
                         style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            background: `var(--status-${status.class})`,
+                            backgroundColor: `var(--status-${status.class})`,
+                            boxShadow: `0 0 8px var(--status-${status.class})`
                         }}
                     />
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
+                    <span className="text-sm text-secondary font-medium">
                         {status.label}
                     </span>
                 </div>

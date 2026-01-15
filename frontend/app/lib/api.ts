@@ -23,10 +23,16 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const defaultHeaders: HeadersInit = {
       'Content-Type': 'application/json',
     };
+
+    // Add CSRF token if available
+    const csrfToken = this.getCookie('csrftoken');
+    if (csrfToken) {
+      (defaultHeaders as any)['X-CSRFToken'] = csrfToken;
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -38,8 +44,19 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // Try to parse error message from response
+      let errorMessage = `API Error: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error || errorData.detail) {
+          errorMessage = errorData.error || errorData.detail;
+        }
+      } catch (e) {
+        // Ignore JSON parse error
+      }
+
       const error: ApiError = {
-        message: `API Error: ${response.statusText}`,
+        message: errorMessage,
         status: response.status,
       };
       throw error;
@@ -48,20 +65,62 @@ class ApiClient {
     return response.json();
   }
 
+  private getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
   // Auth
   async login(username: string, password: string) {
-    // For session-based auth, we POST to the login endpoint
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    const csrfToken = this.getCookie('csrftoken');
+    if (csrfToken) {
+      (headers as any)['X-CSRFToken'] = csrfToken;
+    }
+
+    // For session-based auth, POST JSON to login endpoint
     const response = await fetch(`${this.baseUrl}/auth/login/`, {
       method: 'POST',
-      body: formData,
+      headers,
+      body: JSON.stringify({ username, password }),
       credentials: 'include',
     });
-    
-    return response.ok;
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.user;
+    }
+    return null;
+  }
+
+  async logout() {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    const csrfToken = this.getCookie('csrftoken');
+    if (csrfToken) {
+      (headers as any)['X-CSRFToken'] = csrfToken;
+    }
+
+    await fetch(`${this.baseUrl}/auth/logout/`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+    });
   }
 
   async getCurrentUser() {
@@ -182,6 +241,23 @@ class ApiClient {
   async getRoomAnalytics() {
     return this.request<RoomAnalytics>('/analytics/rooms/');
   }
+
+  // System Events (Audit Log)
+  async getSystemEvents() {
+    return this.request<PaginatedResponse<SystemEvent>>('/events/');
+  }
+}
+
+// Types
+export interface SystemEvent {
+  id: string;
+  category: string;
+  event_type: string;
+  description: string;
+  user_name: string;
+  ip_address: string;
+  created_at: string;
+  formatted_date: string; // Assuming backend sends this or we format it
 }
 
 // Types
@@ -244,6 +320,7 @@ export interface Room {
   is_available: boolean;
   overnight_rate?: string;
   short_rest_rate?: string;
+  current_booking_id?: string | null;
 }
 
 export interface RoomType {

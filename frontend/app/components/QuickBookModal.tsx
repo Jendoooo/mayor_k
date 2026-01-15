@@ -19,14 +19,24 @@ export default function QuickBookModal({
     selectedRoom
 }: QuickBookModalProps) {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        guest_name: string;
+        guest_phone: string;
+        room_id: string;
+        stay_type: 'SHORT_REST' | 'OVERNIGHT' | 'LODGE';
+        num_nights: number;
+        num_guests: number;
+        payment_method: 'CASH' | 'TRANSFER' | 'POS' | 'PAYSTACK' | 'SPLIT';
+        amount_paid: number;
+        notes: string;
+    }>({
         guest_name: '',
         guest_phone: '',
         room_id: selectedRoom?.id || '',
-        stay_type: 'OVERNIGHT' as const,
+        stay_type: 'OVERNIGHT',
         num_nights: 1,
         num_guests: 1,
-        payment_method: 'CASH' as const,
+        payment_method: 'CASH',
         amount_paid: 0,
         notes: '',
     });
@@ -36,12 +46,14 @@ export default function QuickBookModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+
         try {
+            // Call the actual API via the onSubmit prop
             await onSubmit(formData);
             onClose();
         } catch (error) {
-            console.error('Booking failed:', error);
-            alert('Booking failed. Please try again.');
+            console.error('Booking error:', error);
+            alert('Failed to create booking. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -154,7 +166,7 @@ export default function QuickBookModal({
                         <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
                             <h4>Payment</h4>
                             <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>
-                                Total: ₦{parseFloat(roomRate || '0').toLocaleString()}
+                                Total: ₦{parseFloat(String(roomRate || '0')).toLocaleString()}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-md">

@@ -7,7 +7,8 @@ from core.views import (
     UserViewSet, SystemEventViewSet, RoomTypeViewSet, RoomViewSet,
     GuestViewSet, BookingViewSet, TransactionViewSet,
     ExpenseCategoryViewSet, ExpenseViewSet,
-    DashboardView, StakeholderDashboardView, RoomAnalyticsView
+    DashboardView, StakeholderDashboardView, RoomAnalyticsView,
+    LoginView, LogoutView
 )
 
 router = DefaultRouter()
@@ -31,5 +32,7 @@ urlpatterns = [
     path('analytics/rooms/', RoomAnalyticsView.as_view(), name='room-analytics'),
     
     # Authentication
-    path('auth/', include('rest_framework.urls')),
+    # Authentication
+    path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
 ]

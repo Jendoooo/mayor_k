@@ -20,7 +20,41 @@ from core.serializers import (
 )
 from bookings.models import RoomType, Room, Guest, Booking, RoomStateTransition
 from finance.models import Transaction, ExpenseCategory, Expense
+from django.contrib.auth import login, logout, authenticate
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
+# ============ AUTH VIEWS ============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        # Support both JSON and FormData
+        if not username:
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            if not user.is_active:
+                return Response({'error': 'Account is disabled'}, status=403)
+                
+            login(request, user)
+            return Response({'status': 'ok', 'user': UserSerializer(user).data})
+        else:
+            return Response({'error': 'Invalid credentials'}, status=400)
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        logout(request)
+        return Response({'status': 'ok'})
 
 # ============ PERMISSIONS ============
 
@@ -259,6 +293,16 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """Approve an expense."""
         expense = self.get_object()
+        
+        # Manager Limit Check
+        if request.user.role == 'MANAGER':
+            limit = Decimal('100000.00')
+            if expense.amount > limit:
+                return Response(
+                    {'error': f'Managers can only approve expenses up to ₦{limit:,.2f}. Please escalate to Admin or Stakeholder.'},
+                    status=403
+                )
+
         if expense.status != Expense.Status.PENDING:
             return Response({'error': 'Only pending expenses can be approved'}, status=400)
         expense.approve(request.user)
@@ -423,12 +467,20 @@ class RoomAnalyticsView(APIView):
     
     def get(self, request):
         # Calculate average dirty duration per room
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
         dirty_to_clean = []
         
         rooms = Room.objects.all()
         for room in rooms:
             transitions = RoomStateTransition.objects.filter(room=room).order_by('transitioned_at')
             
+            if start_date:
+                transitions = transitions.filter(transitioned_at__date__gte=start_date)
+            if end_date:
+                transitions = transitions.filter(transitioned_at__date__lte=end_date)
+                
             dirty_start = None
             durations = []
             

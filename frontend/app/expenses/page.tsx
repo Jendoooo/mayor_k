@@ -1,43 +1,65 @@
 'use client';
 
-import { useState } from 'react';
-import { Expense } from '@/app/lib/api';
-
-const mockExpenses: Expense[] = [
-    {
-        id: '1',
-        expense_ref: 'EXP-001',
-        category: '1',
-        category_name: 'Diesel',
-        description: '50 Liters for Generator',
-        amount: '45000',
-        vendor_name: 'Total Station Epe',
-        status: 'APPROVED',
-        status_display: 'Approved',
-        logged_by_name: 'Ada Receptionist',
-        approved_by_name: 'Manager One',
-        expense_date: '2026-01-15',
-        created_at: '2026-01-15T09:00:00',
-    },
-    {
-        id: '2',
-        expense_ref: 'EXP-002',
-        category: '2',
-        category_name: 'Maintenance',
-        description: 'Plumbing repair Room 104',
-        amount: '5000',
-        vendor_name: 'Local Plumber',
-        status: 'PENDING',
-        status_display: 'Pending Approval',
-        logged_by_name: 'Ada Receptionist',
-        approved_by_name: null,
-        expense_date: '2026-01-15',
-        created_at: '2026-01-15T11:30:00',
-    }
-];
+import { useState, useEffect } from 'react';
+import api, { Expense } from '@/app/lib/api';
+import { useAuth } from '@/app/context/AuthContext';
+import LogExpenseModal from '@/app/components/LogExpenseModal';
 
 export default function ExpensesPage() {
-    const [expenses] = useState(mockExpenses);
+    const { user } = useAuth();
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+
+    useEffect(() => {
+        fetchExpenses();
+    }, []);
+
+    const fetchExpenses = async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.getExpenses();
+            setExpenses(response.results);
+        } catch (error) {
+            console.error('Failed to fetch expenses:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleApprove = async (expense: Expense) => {
+        if (!confirm(`Approve expense ${expense.expense_ref}?`)) return;
+        try {
+            await api.approveExpense(expense.id);
+            fetchExpenses();
+        } catch (error) {
+            console.error('Failed to approve:', error);
+            alert('Failed to approve expense');
+        }
+    };
+
+    const handleReject = async (expense: Expense) => {
+        const reason = prompt('Enter rejection reason:');
+        if (!reason) return;
+
+        try {
+            await api.rejectExpense(expense.id, reason);
+            fetchExpenses();
+        } catch (error) {
+            console.error('Failed to reject:', error);
+            alert('Failed to reject expense');
+        }
+    };
+
+    const canApprove = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -46,58 +68,87 @@ export default function ExpensesPage() {
                     <h1>Expenses</h1>
                     <p className="text-secondary">Track operational costs and approvals</p>
                 </div>
-                <button className="btn btn-warning">
+                <button
+                    className="btn btn-warning"
+                    onClick={() => setIsLogModalOpen(true)}
+                >
                     + Log Expense
                 </button>
             </div>
 
             <div className="card">
                 <div className="table-container">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Ref</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Vendor</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Logged By</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {expenses.map((exp) => (
-                                <tr key={exp.id}>
-                                    <td className="font-mono text-sm">{exp.expense_ref}</td>
-                                    <td>{exp.category_name}</td>
-                                    <td>{exp.description}</td>
-                                    <td className="text-sm">{exp.vendor_name}</td>
-                                    <td className="font-bold">₦{parseFloat(exp.amount).toLocaleString()}</td>
-                                    <td>
-                                        <span className={`badge ${exp.status === 'APPROVED' ? 'badge-approved' :
-                                                exp.status === 'PENDING' ? 'badge-pending' : 'badge-rejected'
-                                            }`}>
-                                            {exp.status_display}
-                                        </span>
-                                    </td>
-                                    <td className="text-sm">{exp.logged_by_name}</td>
-                                    <td className="text-sm">{exp.expense_date}</td>
-                                    <td>
-                                        {exp.status === 'PENDING' && (
-                                            <div className="flex gap-sm">
-                                                <button className="btn btn-success" style={{ padding: '4px 8px' }}>✓</button>
-                                                <button className="btn btn-danger" style={{ padding: '4px 8px' }}>✕</button>
-                                            </div>
-                                        )}
-                                    </td>
+                    {expenses.length === 0 ? (
+                        <div className="text-center py-xl text-secondary">
+                            No expenses found.
+                        </div>
+                    ) : (
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Ref</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Vendor</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Logged By</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {expenses.map((exp) => (
+                                    <tr key={exp.id}>
+                                        <td className="font-mono text-sm">{exp.expense_ref}</td>
+                                        <td>{exp.category_name}</td>
+                                        <td>{exp.description}</td>
+                                        <td className="text-sm">{exp.vendor_name || '-'}</td>
+                                        <td className="font-bold">₦{parseFloat(exp.amount).toLocaleString()}</td>
+                                        <td>
+                                            <span className={`badge ${exp.status === 'APPROVED' ? 'badge-approved' :
+                                                exp.status === 'PENDING' ? 'badge-pending' : 'badge-rejected'
+                                                }`}>
+                                                {exp.status_display}
+                                            </span>
+                                        </td>
+                                        <td className="text-sm">{exp.logged_by_name}</td>
+                                        <td className="text-sm">{exp.expense_date}</td>
+                                        <td>
+                                            {exp.status === 'PENDING' && canApprove && (
+                                                <div className="flex gap-sm">
+                                                    <button
+                                                        className="btn btn-success"
+                                                        style={{ padding: '4px 8px' }}
+                                                        onClick={() => handleApprove(exp)}
+                                                        title="Approve"
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-danger"
+                                                        style={{ padding: '4px 8px' }}
+                                                        onClick={() => handleReject(exp)}
+                                                        title="Reject"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
+
+            <LogExpenseModal
+                isOpen={isLogModalOpen}
+                onClose={() => setIsLogModalOpen(false)}
+                onSubmit={fetchExpenses}
+            />
         </div>
     );
 }

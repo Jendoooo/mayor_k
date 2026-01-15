@@ -1,46 +1,53 @@
-'use client';
+import { ReactNode } from 'react';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 
 interface StatCardProps {
-    value: string | number;
     label: string;
+    value: string | number;
+    icon: ReactNode;
     accent?: 'primary' | 'success' | 'warning' | 'danger' | 'info';
-    change?: {
+    trend?: {
         value: string;
-        positive: boolean;
+        direction: 'up' | 'down' | 'neutral';
+        label?: string; // e.g. "vs yesterday"
     };
-    icon?: React.ReactNode;
 }
 
-const accentColors = {
-    primary: 'var(--color-primary)',
-    success: 'var(--color-success)',
-    warning: 'var(--color-warning)',
-    danger: 'var(--color-danger)',
-    info: 'var(--color-info)',
-};
+export default function StatCard({ label, value, icon, accent = 'primary', trend }: StatCardProps) {
+    // Map accent colors to CSS variables
+    const accentColorMap = {
+        primary: 'var(--color-primary)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        danger: 'var(--color-danger)',
+        info: 'var(--color-info)',
+    };
 
-export default function StatCard({ value, label, accent = 'primary', change, icon }: StatCardProps) {
     return (
         <div
             className="stat-card"
-            style={{ '--stat-accent': accentColors[accent] } as React.CSSProperties}
+            style={{
+                '--stat-accent': accentColorMap[accent]
+            } as React.CSSProperties}
         >
-            <div className="flex justify-between items-center">
-                <div>
-                    <div className="stat-value">{value}</div>
-                    <div className="stat-label">{label}</div>
-                    {change && (
-                        <div className={`stat-change ${change.positive ? '' : 'negative'}`}>
-                            {change.positive ? '↑' : '↓'} {change.value}
-                        </div>
-                    )}
+            <div className="flex justify-between items-start mb-sm">
+                <div className="stat-label">{label}</div>
+                <div className={`p-xs rounded-full bg-${accent}/10 text-${accent}`}>
+                    {icon}
                 </div>
-                {icon && (
-                    <div style={{ opacity: 0.5 }}>
-                        {icon}
-                    </div>
-                )}
             </div>
+
+            <div className="stat-value">{value}</div>
+
+            {trend && (
+                <div className={`stat-change ${trend.direction === 'down' ? 'negative' : ''}`}>
+                    {trend.direction === 'up' && <ArrowUpRight size={14} />}
+                    {trend.direction === 'down' && <ArrowDownRight size={14} />}
+                    {trend.direction === 'neutral' && <Minus size={14} />}
+                    <span>{trend.value}</span>
+                    {trend.label && <span className="text-muted ml-xs text-xs lowercase">{trend.label}</span>}
+                </div>
+            )}
         </div>
     );
 }

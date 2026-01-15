@@ -1,48 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RoomGrid, RoomLegend } from '@/app/components/RoomCard';
-import { Room } from '@/app/lib/api';
-
-// Mock data - same as dashboard
-const mockRooms: Room[] = [
-    { id: '1', room_number: '101', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '2', room_number: '102', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'OCCUPIED', state_display: 'Occupied', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '3', room_number: '103', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '4', room_number: '104', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'DIRTY', state_display: 'Dirty', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '5', room_number: '105', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '6', room_number: '106', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '7', room_number: '107', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'OCCUPIED', state_display: 'Occupied', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '8', room_number: '108', room_type: '1', room_type_name: 'Standard', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '9', room_number: '109', room_type: '2', room_type_name: 'Deluxe', floor: 1, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '10', room_number: '110', room_type: '2', room_type_name: 'Deluxe', floor: 1, current_state: 'MAINTENANCE', state_display: 'Maintenance', notes: 'AC repair', is_active: true, is_available: false, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '11', room_number: '201', room_type: '1', room_type_name: 'Standard', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '12', room_number: '202', room_type: '1', room_type_name: 'Standard', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '13', room_number: '203', room_type: '1', room_type_name: 'Standard', floor: 2, current_state: 'OCCUPIED', state_display: 'Occupied', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '14', room_number: '204', room_type: '1', room_type_name: 'Standard', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '15', room_number: '205', room_type: '1', room_type_name: 'Standard', floor: 2, current_state: 'DIRTY', state_display: 'Dirty', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '16', room_number: '206', room_type: '2', room_type_name: 'Deluxe', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '17', room_number: '207', room_type: '2', room_type_name: 'Deluxe', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '18', room_number: '208', room_type: '2', room_type_name: 'Deluxe', floor: 2, current_state: 'OCCUPIED', state_display: 'Occupied', notes: '', is_active: true, is_available: false, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '19', room_number: '209', room_type: '2', room_type_name: 'Deluxe', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '20', room_number: '210', room_type: '3', room_type_name: 'VIP Suite', floor: 2, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '30000', short_rest_rate: '12000' },
-    { id: '21', room_number: '301', room_type: '1', room_type_name: 'Standard', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '22', room_number: '302', room_type: '1', room_type_name: 'Standard', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '23', room_number: '303', room_type: '1', room_type_name: 'Standard', floor: 3, current_state: 'DIRTY', state_display: 'Dirty', notes: '', is_active: true, is_available: false, overnight_rate: '12000', short_rest_rate: '5000' },
-    { id: '24', room_number: '304', room_type: '2', room_type_name: 'Deluxe', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '25', room_number: '305', room_type: '2', room_type_name: 'Deluxe', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '26', room_number: '306', room_type: '2', room_type_name: 'Deluxe', floor: 3, current_state: 'OCCUPIED', state_display: 'Occupied', notes: '', is_active: true, is_available: false, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '27', room_number: '307', room_type: '2', room_type_name: 'Deluxe', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '28', room_number: '308', room_type: '2', room_type_name: 'Deluxe', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '18000', short_rest_rate: '8000' },
-    { id: '29', room_number: '309', room_type: '3', room_type_name: 'VIP Suite', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '30000', short_rest_rate: '12000' },
-    { id: '30', room_number: '310', room_type: '3', room_type_name: 'VIP Suite', floor: 3, current_state: 'AVAILABLE', state_display: 'Available', notes: '', is_active: true, is_available: true, overnight_rate: '30000', short_rest_rate: '12000' },
-];
+import QuickBookModal from '@/app/components/QuickBookModal';
+import api, { Room, QuickBookData } from '@/app/lib/api';
 
 export default function RoomsPage() {
-    const [rooms, setRooms] = useState<Room[]>(mockRooms);
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filterState, setFilterState] = useState<string>('');
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [isQuickBookOpen, setIsQuickBookOpen] = useState(false);
+
+    useEffect(() => {
+        fetchRooms();
+    }, []);
+
+    const fetchRooms = async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.getRooms();
+            setRooms(response.results);
+        } catch (error) {
+            console.error('Failed to fetch rooms:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredRooms = rooms.filter(r => {
         if (filterState && r.current_state !== filterState) return false;
@@ -51,19 +36,46 @@ export default function RoomsPage() {
     });
 
     const handleMarkClean = async (room: Room) => {
-        // TODO: API call
-        setRooms(rooms.map(r =>
-            r.id === room.id ? { ...r, current_state: 'AVAILABLE' as const, state_display: 'Available', is_available: true } : r
-        ));
-        setSelectedRoom(null);
+        if (!confirm(`Mark Room ${room.room_number} as clean?`)) return;
+        try {
+            await api.markRoomClean(room.id);
+            fetchRooms(); // Refresh to show new state
+            setSelectedRoom(null);
+        } catch (error) {
+            console.error('Failed to mark clean:', error);
+            alert('Failed to update room status');
+        }
     };
 
     const handleMarkMaintenance = async (room: Room) => {
-        // TODO: API call
-        setRooms(rooms.map(r =>
-            r.id === room.id ? { ...r, current_state: 'MAINTENANCE' as const, state_display: 'Maintenance', is_available: false } : r
-        ));
-        setSelectedRoom(null);
+        const notes = prompt('Enter maintenance notes (reason):');
+        if (notes === null) return; // Cancelled
+
+        try {
+            await api.markRoomMaintenance(room.id, notes);
+            fetchRooms();
+            setSelectedRoom(null);
+        } catch (error) {
+            console.error('Failed to mark maintenance:', error);
+            alert('Failed to update room status');
+        }
+    };
+
+    const handleQuickBookSubmit = async (data: QuickBookData) => {
+        try {
+            await api.quickBook(data);
+            setIsQuickBookOpen(false);
+            fetchRooms();
+            alert('Booking created successfully!');
+        } catch (error) {
+            console.error('Booking failed:', error);
+            alert('Failed to create booking. Please check available rooms.');
+        }
+    };
+
+    const openQuickBook = (room: Room) => {
+        setSelectedRoom(room);
+        setIsQuickBookOpen(true);
     };
 
     const roomsByFloor = [1, 2, 3].map(floor => ({
@@ -79,6 +91,14 @@ export default function RoomsPage() {
         maintenance: rooms.filter(r => r.current_state === 'MAINTENANCE').length,
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
     return (
         <div>
             {/* Header */}
@@ -91,7 +111,7 @@ export default function RoomsPage() {
 
             {/* Filters */}
             <div className="card mb-lg">
-                <div className="flex gap-md items-center">
+                <div className="flex gap-md items-center flex-wrap">
                     <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>Filter:</span>
 
                     {/* State Filter */}
@@ -146,7 +166,7 @@ export default function RoomsPage() {
             ))}
 
             {/* Room Detail Modal */}
-            {selectedRoom && (
+            {selectedRoom && !isQuickBookOpen && (
                 <div className="modal-overlay" onClick={() => setSelectedRoom(null)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
@@ -189,7 +209,10 @@ export default function RoomsPage() {
                             )}
                             {selectedRoom.current_state === 'AVAILABLE' && (
                                 <>
-                                    <button className="btn btn-primary w-full">
+                                    <button
+                                        className="btn btn-primary w-full"
+                                        onClick={() => openQuickBook(selectedRoom)}
+                                    >
                                         ⚡ Quick Book This Room
                                     </button>
                                     <button
@@ -217,6 +240,17 @@ export default function RoomsPage() {
                     </div>
                 </div>
             )}
+
+            <QuickBookModal
+                isOpen={isQuickBookOpen}
+                onClose={() => {
+                    setIsQuickBookOpen(false);
+                    setSelectedRoom(null);
+                }}
+                availableRooms={rooms.filter(r => r.current_state === 'AVAILABLE')}
+                selectedRoom={selectedRoom || undefined}
+                onSubmit={handleQuickBookSubmit}
+            />
         </div>
     );
 }
