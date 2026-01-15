@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from rest_framework import serializers
 from django.utils import timezone
-from core.models import User, SystemEvent
+from core.models import User, SystemEvent, WorkShift
 from bookings.models import RoomType, Room, Guest, Booking, BookingExtension, RoomStateTransition
 from finance.models import Transaction, ExpenseCategory, Expense
 
@@ -66,6 +66,31 @@ class RoomTypeSerializer(serializers.ModelSerializer):
     
     def get_room_count(self, obj):
         return obj.rooms.count()
+
+    def get_price(self, obj):
+        return obj.room_type.base_rate_overnight
+
+class WorkShiftSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    discrepancy = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = WorkShift
+        fields = [
+            'id', 'user', 'user_name', 'status', 'start_time', 'end_time',
+            'opening_balance', 'closing_balance', 'system_cash_total',
+            'discrepancy', 'notes'
+        ]
+        read_only_fields = ['user', 'start_time', 'end_time', 'status', 'system_cash_total', 'discrepancy']
+
+    def create(self, validated_data):
+        # Ensure only one open shift per user
+        user = self.context['request'].user
+        if WorkShift.objects.filter(user=user, status=WorkShift.Status.OPEN).exists():
+            raise serializers.ValidationError("You already have an open shift.")
+        
+        validated_data['user'] = user
+        return super().create(validated_data)()
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -135,11 +160,15 @@ class RoomAvailabilitySerializer(serializers.ModelSerializer):
         source='room_type.base_rate_short_rest',
         max_digits=10, decimal_places=2, read_only=True
     )
+    price = serializers.DecimalField(
+        source='room_type.base_rate_overnight',
+        max_digits=10, decimal_places=2, read_only=True
+    )
     
     class Meta:
         model = Room
         fields = ['id', 'room_number', 'room_type_name', 'floor', 
-                  'current_state', 'overnight_rate', 'short_rest_rate']
+                  'current_state', 'overnight_rate', 'short_rest_rate', 'price']
 
 
 class GuestSerializer(serializers.ModelSerializer):
@@ -149,9 +178,9 @@ class GuestSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Guest
-        fields = ['id', 'name', 'phone', 'email', 'notes', 'is_blocked',
+        fields = ['id', 'guest_code', 'name', 'phone', 'email', 'notes', 'is_blocked',
                   'total_stays', 'total_spent', 'last_visit', 'created_at']
-        read_only_fields = ['id', 'total_stays', 'total_spent', 'last_visit', 'created_at']
+        read_only_fields = ['id', 'guest_code', 'total_stays', 'total_spent', 'last_visit', 'created_at']
     
     def get_total_stays(self, obj):
         """Count all completed and active bookings for this guest."""

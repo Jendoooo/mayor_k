@@ -835,3 +835,37 @@ h4 {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 }
+
+/* ============ PRINT STYLES ============ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-container,
+  .receipt-container * {
+    visibility: visible;
+  }
+
+  .receipt-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+    display: block !important;
+  }
+
+  /* Reset layout constraints */
+  .layout,
+  .sidebar,
+  .main-content {
+    display: block;
+    height: auto;
+    overflow: visible;
+    position: static;
+  }
+}

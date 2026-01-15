@@ -8,7 +8,7 @@ from core.views import (
     GuestViewSet, BookingViewSet, TransactionViewSet,
     ExpenseCategoryViewSet, ExpenseViewSet,
     DashboardView, StakeholderDashboardView, AnalyticsView,
-    LoginView, LogoutView
+    LoginView, LogoutView, WorkShiftViewSet
 )
 
 router = DefaultRouter()
@@ -21,6 +21,7 @@ router.register(r'bookings', BookingViewSet)
 router.register(r'transactions', TransactionViewSet)
 router.register(r'expense-categories', ExpenseCategoryViewSet)
 router.register(r'expenses', ExpenseViewSet)
+router.register(r'shifts', WorkShiftViewSet)
 
 urlpatterns = [
     # ViewSet routes

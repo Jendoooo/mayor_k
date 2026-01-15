@@ -59,10 +59,11 @@ export default function Dashboard() {
 
     const handleQuickBookSubmit = async (data: QuickBookData) => {
         try {
-            await api.quickBook(data);
+            const booking = await api.quickBook(data);
             setIsQuickBookOpen(false);
             fetchData(); // Refresh data to show new status
             toast.success('Check-in successful!');
+            return booking;
         } catch (error: any) {
             console.error('Booking failed:', error);
             const msg = error?.message || 'Failed to check-in. Please try again.';
@@ -115,17 +116,33 @@ export default function Dashboard() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
                         {stats.alerts.map((alert, idx) => (
-                            <a
+                            <button
                                 key={idx}
-                                href={alert.link || '#'}
-                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${alert.severity === 'high' ? 'bg-red-500/20 border-red-500/40 text-red-100 hover:bg-red-500/30' :
-                                        alert.severity === 'medium' ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-100 hover:bg-yellow-500/30' :
-                                            'bg-blue-500/20 border-blue-500/40 text-blue-100 hover:bg-blue-500/30'
+                                onClick={() => {
+                                    if (alert.action_type === 'VIEW_ROOM' && alert.resource_id) {
+                                        const room = rooms.find(r => r.id === alert.resource_id);
+                                        if (room) {
+                                            if (room.current_state === 'AVAILABLE') {
+                                                setSelectedRoom(room);
+                                                setIsQuickBookOpen(true);
+                                            } else {
+                                                setSelectedActionRoom(room);
+                                            }
+                                        } else {
+                                            toast.error("Room not found");
+                                        }
+                                    } else if (alert.link) {
+                                        window.location.href = alert.link;
+                                    }
+                                }}
+                                className={`flex items-center justify-between p-4 rounded-xl border transition-all w-full text-left ${alert.severity === 'high' ? 'bg-red-500/20 border-red-500/40 text-red-100 hover:bg-red-500/30' :
+                                    alert.severity === 'medium' ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-100 hover:bg-yellow-500/30' :
+                                        'bg-blue-500/20 border-blue-500/40 text-blue-100 hover:bg-blue-500/30'
                                     }`}
                             >
                                 <span className="font-medium text-sm">{alert.message}</span>
                                 <ArrowRight size={14} className="opacity-70" />
-                            </a>
+                            </button>
                         ))}
                     </div>
                 </motion.div>
@@ -204,8 +221,8 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                         <div className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${booking.status === 'CHECKED_IN' ? 'bg-blue-500/20 text-blue-300' :
-                                                booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-300' :
-                                                    'bg-slate-500/20 text-slate-400'
+                                            booking.status === 'CONFIRMED' ? 'bg-green-500/20 text-green-300' :
+                                                'bg-slate-500/20 text-slate-400'
                                             }`}>
                                             {booking.status_display}
                                         </div>

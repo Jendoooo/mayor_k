@@ -16,44 +16,16 @@ const typeAbbreviations: Record<string, string> = {
     'Executive': 'EXEC',
 };
 
+import CountdownTimer from './CountdownTimer';
+
+// ... (keep interface and typeAbbreviations)
+
 export default function RoomCard({ room, onClick }: RoomCardProps) {
-    const typeAbbr = typeAbbreviations[room.room_type_name] || room.room_type_name.slice(0, 4).toUpperCase();
-
-    // Timer Logic
-    const [timeLeft, setTimeLeft] = React.useState<string>('');
-    const [isOverdue, setIsOverdue] = React.useState(false);
-
-    React.useEffect(() => {
-        if (room.current_state !== 'OCCUPIED' || !room.booking_stay_info) {
-            setTimeLeft('');
-            return;
-        }
-
-        const updateTimer = () => {
-            const now = new Date();
-            const end = new Date(room.booking_stay_info!.expected_checkout);
-            const diff = end.getTime() - now.getTime();
-            const absDiff = Math.abs(diff);
-
-            const hours = Math.floor(absDiff / (1000 * 60 * 60));
-            const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
-
-            if (diff < 0) {
-                setIsOverdue(true);
-                setTimeLeft(`-${hours}h ${minutes}m`);
-            } else {
-                setIsOverdue(false);
-                setTimeLeft(`${hours}h ${minutes}m`);
-            }
-        };
-
-        updateTimer();
-        const interval = setInterval(updateTimer, 60000); // Update every minute
-        return () => clearInterval(interval);
-    }, [room]);
+    const typeAbbr = typeAbbreviations[room.room_type_name || ''] || (room.room_type_name ? room.room_type_name.slice(0, 4).toUpperCase() : 'RM');
 
     // Styles Configuration
     const getStyles = () => {
+        // ... (keep existing styles logic)
         switch (room.current_state) {
             case 'AVAILABLE':
                 return {
@@ -88,17 +60,16 @@ export default function RoomCard({ room, onClick }: RoomCardProps) {
 
     return (
         <div
-            className={`relative rounded-xl border p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl aspect-square flex flex-col items-center justify-center gap-1 ${styles.wrap} ${isOverdue ? 'animate-pulse ring-2 ring-red-500/50' : ''}`}
+            className={`relative rounded-xl border p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl aspect-square flex flex-col items-center justify-center gap-1 ${styles.wrap}`}
             onClick={() => onClick?.(room)}
         >
             {/* Top Bar: Icon + Timer */}
-            <div className="absolute top-2 left-2 flex items-center justify-between w-full pr-4 opacity-70">
-                {styles.icon && <div>{styles.icon}</div>}
+            <div className="absolute top-2 left-2 flex items-start justify-between w-full pr-2">
+                <div className="opacity-70">{styles.icon}</div>
 
-                {room.current_state === 'OCCUPIED' && timeLeft && (
-                    <div className={`text-[9px] font-mono px-1.5 py-0.5 rounded flex items-center gap-1 ml-auto ${isOverdue ? 'bg-red-500 text-white' : 'bg-black/30'}`}>
-                        {isOverdue && <ClockAlert size={8} />}
-                        {timeLeft}
+                {room.current_state === 'OCCUPIED' && room.booking_stay_info && (
+                    <div className="bg-black/60 rounded px-1.5 py-0.5 backdrop-blur-md shadow-sm ml-auto z-10">
+                        <CountdownTimer targetDate={room.booking_stay_info.expected_checkout} />
                     </div>
                 )}
             </div>

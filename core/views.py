@@ -10,14 +10,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import User, SystemEvent
+from core.models import User, SystemEvent, WorkShift
 from core.serializers import (
     UserSerializer, SystemEventSerializer, RoomTypeSerializer, RoomSerializer,
     RoomAvailabilitySerializer, GuestSerializer, GuestCreateSerializer,
     BookingSerializer, QuickBookSerializer, TransactionSerializer,
     ExpenseCategorySerializer, ExpenseSerializer, ExpenseCreateSerializer,
-    ExpenseCategorySerializer, ExpenseSerializer, ExpenseCreateSerializer,
-    DashboardStatsSerializer, StakeholderDashboardSerializer
+    DashboardStatsSerializer, StakeholderDashboardSerializer, WorkShiftSerializer
 )
 from bookings.models import RoomType, Room, Guest, Booking, RoomStateTransition, BookingExtension
 from finance.models import Transaction, ExpenseCategory, Expense
@@ -163,6 +162,56 @@ class SystemEventViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['created_at']
 
 
+class WorkShiftViewSet(viewsets.ModelViewSet):
+    queryset = WorkShift.objects.all()
+    serializer_class = WorkShiftSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Users see their own shifts, Admins/Managers see all
+        if self.request.user.role in ['ADMIN', 'MANAGER']:
+            return WorkShift.objects.all().order_by('-start_time')
+        return WorkShift.objects.filter(user=self.request.user).order_by('-start_time')
+
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        """Get the current open shift for the user."""
+        shift = WorkShift.objects.filter(user=request.user, status=WorkShift.Status.OPEN).first()
+        if shift:
+            return Response(WorkShiftSerializer(shift).data)
+        return Response(None) # No content or null
+
+    @action(detail=True, methods=['post'])
+    def end_shift(self, request, pk=None):
+        """Close the shift."""
+        shift = self.get_object()
+        if shift.status != WorkShift.Status.OPEN:
+            return Response({'error': 'Shift is already closed'}, status=400)
+        
+        # Verify user owns shift or is Admin
+        if shift.user != request.user and request.user.role != 'ADMIN':
+             return Response({'error': 'Cannot close another user\'s shift'}, status=403)
+
+        closing_balance = request.data.get('closing_balance')
+        notes = request.data.get('notes', '')
+        
+        if closing_balance is None:
+             return Response({'error': 'Closing balance required'}, status=400)
+             
+        shift.close(closing_balance=Decimal(closing_balance), notes=notes)
+        
+        # Log event
+        SystemEvent.log(
+            event_type='SHIFT_CLOSED',
+            category=SystemEvent.EventCategory.AUTH,
+            actor=request.user,
+            target=shift,
+            description=f"Shift closed. Opening: {shift.opening_balance}, Closing: {shift.closing_balance}, System: {shift.system_cash_total}"
+        )
+        
+        return Response(WorkShiftSerializer(shift).data)
+
+
 class RoomTypeViewSet(viewsets.ModelViewSet):
     queryset = RoomType.objects.all()
     serializer_class = RoomTypeSerializer
@@ -200,6 +249,11 @@ class RoomViewSet(viewsets.ModelViewSet):
     filterset_fields = ['current_state', 'room_type', 'floor', 'is_active']
     search_fields = ['room_number']
     ordering_fields = ['room_number', 'floor']
+    
+    def get_permissions(self):
+        if self.action in ['available', 'retrieve']:
+            return [permissions.AllowAny()]
+        return super().get_permissions()
     
     @action(detail=False, methods=['get'])
     def available(self, request):
@@ -567,7 +621,8 @@ class DashboardView(APIView):
                 'type': 'OVERDUE_BOOKING',
                 'severity': 'high',
                 'message': f"Room {b.room.room_number} overdue by {minutes}m ({b.guest.name})",
-                'link': f"/bookings/{b.id}"
+                'resource_id': str(b.room.id),
+                'action_type': 'VIEW_ROOM'
             })
             
         # 2. Long Dirty Rooms (> 2 hours)

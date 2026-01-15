@@ -169,6 +169,7 @@ class Guest(models.Model):
     Stores basic info for repeat guest recognition.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    guest_code = models.CharField(max_length=20, unique=True, editable=False, null=True)
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20, unique=True)
     email = models.EmailField(blank=True)
@@ -187,7 +188,25 @@ class Guest(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.name} ({self.phone})"
+        return f"{self.name} ({self.guest_code or 'NO-CODE'})"
+
+    def save(self, *args, **kwargs):
+        if not self.guest_code:
+            # Generate ID: GST-0001
+            last_guest = Guest.objects.all().order_by('created_at').last()
+            if last_guest and last_guest.guest_code:
+                try:
+                    last_id = int(last_guest.guest_code.split('-')[1])
+                    new_id = last_id + 1
+                except (IndexError, ValueError):
+                    # Fallback if format is messed up
+                    new_id = Guest.objects.count() + 1
+            else:
+                new_id = Guest.objects.count() + 1
+            
+            self.guest_code = f"GST-{new_id:04d}"
+            
+        super().save(*args, **kwargs)
 
 
 class Booking(models.Model):

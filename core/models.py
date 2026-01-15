@@ -177,7 +177,52 @@ class SystemEvent(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.event_type} by {self.actor} at {self.created_at}"
+        return f"{self.event_type} - {self.actor} - {self.created_at}"
+
+
+class WorkShift(models.Model):
+    """
+    Represents a staff work shift. 
+    Crucial for tracking cash-in-hand and accountability.
+    """
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', 'Open'
+        CLOSED = 'CLOSED', 'Closed'
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shifts')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    
+    # Cash Reconciliation
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Cash in drawer at start")
+    closing_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Cash declared at end")
+    system_cash_total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Cash recorded by system during shift")
+    
+    notes = models.TextField(blank=True, help_text="Handover notes or variance explanation")
+    
+    class Meta:
+        ordering = ['-start_time']
+        
+    def __str__(self):
+        return f"{self.user.username} - {self.start_time.date()} ({self.status})"
+        
+    @property
+    def discrepancy(self):
+        if self.closing_balance is None:
+            return None
+        # Discrepancy = Declared - (Opening + System)
+        expected = self.opening_balance + self.system_cash_total
+        return self.closing_balance - expected
+
+    def close(self, closing_balance, notes=""):
+        from django.utils import timezone
+        self.closing_balance = closing_balance
+        self.end_time = timezone.now()
+        self.status = self.Status.CLOSED
+        self.notes = notes
+        self.save()
     
     @classmethod
     def log(cls, event_type, category, actor=None, target=None, payload=None, request=None, description=''):

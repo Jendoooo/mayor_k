@@ -12,7 +12,7 @@ export default function BookingWidget() {
     const [checkOut, setCheckOut] = useState('');
 
     const handleSearch = () => {
-        router.push(`/bookings/new?guests=${guests}&in=${checkIn}&out=${checkOut}`);
+        router.push(`/book?guests=${guests}&in=${checkIn}&out=${checkOut}`);
     };
 
     return (

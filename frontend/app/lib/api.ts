@@ -174,6 +174,10 @@ class ApiClient {
     return this.request<PaginatedResponse<Room>>('/rooms/');
   }
 
+  async getRoom(id: string) {
+    return this.request<Room>(`/rooms/${id}/`);
+  }
+
   async getAvailableRooms(startDate?: string, endDate?: string) {
     const query = startDate && endDate ? `?start_date=${startDate}&end_date=${endDate}` : '';
     return this.request<Room[]>(`/rooms/available/${query}`);
@@ -357,6 +361,25 @@ class ApiClient {
   async getStockLogs() {
     return this.request<PaginatedResponse<StockLog>>('/inventory/stock-logs/');
   }
+
+  // Shift Management
+  async getCurrentShift() {
+    return this.request<WorkShift>('/shifts/current/');
+  }
+
+  async startShift(data: { opening_balance: number }) {
+    return this.request<WorkShift>('/shifts/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async endShift(id: number, data: { closing_balance: number; notes?: string }) {
+    return this.request<WorkShift>(`/shifts/${id}/end_shift/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Types
@@ -404,6 +427,8 @@ export interface Alert {
   severity: 'high' | 'medium' | 'info';
   message: string;
   link?: string;
+  action_type?: string;
+  resource_id?: string;
 }
 
 export interface StakeholderDashboard {
@@ -428,23 +453,23 @@ export interface Anomaly {
   ref?: string;
 }
 
+export type RoomState = 'AVAILABLE' | 'OCCUPIED' | 'DIRTY' | 'CLEANING' | 'MAINTENANCE';
+
 export interface Room {
   id: string;
   room_number: string;
-  room_type: string;
-  room_type_name: string;
+  room_type: string; // ID
+  room_type_name?: string;
   floor: number;
-  current_state: 'AVAILABLE' | 'OCCUPIED' | 'DIRTY' | 'CLEANING' | 'MAINTENANCE';
+  current_state: RoomState;
   state_display: string;
   notes: string;
   is_active: boolean;
   is_available: boolean;
-  overnight_rate?: string;
-  short_rest_rate?: string;
-  current_booking_id?: string | null;
+  overnight_rate?: string | number;
+  short_rest_rate?: string | number;
+  price?: string | number;
   booking_stay_info?: {
-    check_in_full: string;
-    expected_checkout: string;
     stay_type: 'SHORT_REST' | 'OVERNIGHT' | 'LODGE';
     guest_name: string;
   } | null;
@@ -465,6 +490,7 @@ export interface RoomType {
 
 export interface Guest {
   id: string;
+  guest_code: string | null;
   name: string;
   phone: string;
   email: string;
@@ -678,6 +704,21 @@ export interface CreateOrderData {
   payment_method: string;
   notes?: string;
   items_data: { product_id: string; quantity: number }[];
+}
+
+// Shift Interface
+export interface WorkShift {
+  id: number;
+  user: string; // ID
+  user_name: string;
+  status: 'OPEN' | 'CLOSED';
+  start_time: string;
+  end_time?: string;
+  opening_balance: string;
+  closing_balance?: string;
+  system_cash_total: string;
+  discrepancy?: string;
+  notes: string;
 }
 
 // Export singleton instance
