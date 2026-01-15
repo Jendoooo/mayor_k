@@ -1,6 +1,74 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'react-hot-toast';
+
+// ... (keep existing imports)
+
+// ... (keep existing state)
+
+const toggleBlockStatus = async () => {
+    if (!existingGuest) return;
+
+    try {
+        // Optimistic update
+        const newStatus = !isBlocked;
+        setIsBlocked(newStatus);
+
+        const res = await fetch(`http://localhost:8000/api/v1/guests/${existingGuest.id}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add auth header if needed, assuming cookie based for now or handled by global fetch wrapper logic if we used 'api' client
+            },
+            credentials: 'include',
+            body: JSON.stringify({ is_blocked: newStatus }),
+        });
+
+        if (res.ok) {
+            const updatedGuest = await res.json();
+            setExistingGuest(updatedGuest);
+            // Ensure state matches backend
+            setIsBlocked(updatedGuest.is_blocked);
+            toast.success(updatedGuest.is_blocked ? 'Guest blocked' : 'Guest unblocked');
+        } else {
+            // Revert on failure
+            setIsBlocked(!newStatus);
+            toast.error('Failed to update guest status');
+        }
+    } catch (err) {
+        console.error(err);
+        setIsBlocked(!isBlocked); // Revert
+        toast.error('Error updating status');
+    }
+};
+
+// ... (keep existing return)
+
+<div className="flex items-center justify-between">
+    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+        <User size={14} /> Guest Information
+    </h3>
+    {existingGuest && (
+        <div className="flex items-center gap-2">
+            <button
+                type="button"
+                onClick={toggleBlockStatus}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isBlocked
+                    ? 'border-emerald-500 text-emerald-400 hover:bg-emerald-500/10'
+                    : 'border-red-500 text-red-400 hover:bg-red-500/10'}`}
+            >
+                {isBlocked ? 'UNBAN' : 'BAN'}
+            </button>
+            <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                <RefreshCw size={12} />
+                {isBlocked ? 'BANNED' : 'Returning'}
+                <span className="opacity-70 ml-1">
+                    ({existingGuest.guest_code || 'NO-ID'})
+                </span>
+            </span>
+        </div>
+    )}
+</div>
 import { Room, QuickBookData, Guest, Booking } from '@/app/lib/api';
 import { X, User, Phone, Home, Clock, CreditCard, FileText, Loader2, RefreshCw, Zap, Printer, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -162,6 +230,40 @@ export default function QuickBookModal({
         window.print();
     };
 
+    const toggleBlockStatus = async () => {
+        if (!existingGuest) return;
+
+        try {
+            // Optimistic update
+            const newStatus = !isBlocked;
+            setIsBlocked(newStatus);
+
+            // Use simple fetch for now as api client might need updating for PATCH guests specific endpoint if not generic
+            const res = await fetch(`http://localhost:8000/api/v1/guests/${existingGuest.id}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ is_blocked: newStatus }),
+            });
+
+            if (res.ok) {
+                const updatedGuest = await res.json();
+                setExistingGuest(updatedGuest);
+                setIsBlocked(updatedGuest.is_blocked);
+                toast.success(updatedGuest.is_blocked ? 'Guest blocked' : 'Guest unblocked');
+            } else {
+                setIsBlocked(!newStatus); // Revert
+                toast.error('Failed to update status');
+            }
+        } catch (err) {
+            console.error(err);
+            setIsBlocked(!isBlocked);
+            toast.error('Error updating status');
+        }
+    };
+
     const paymentMethods = [
         { value: 'CASH', label: 'Cash', icon: '💵' },
         { value: 'TRANSFER', label: 'Transfer', icon: '🏦' },
@@ -270,13 +372,24 @@ export default function QuickBookModal({
                                                 <User size={14} /> Guest Information
                                             </h3>
                                             {existingGuest && (
-                                                <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                    <RefreshCw size={12} />
-                                                    {isBlocked ? 'BANNED GUEST' : 'Returning Guest'}
-                                                    <span className="opacity-70 ml-1">
-                                                        ({existingGuest.guest_code || 'NO-ID'}) • {existingGuest.total_stays} stays
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={toggleBlockStatus}
+                                                        className={`text-[10px] font-bold px-3 py-1 rounded-lg border transition-all ${isBlocked
+                                                            ? 'border-emerald-500 text-emerald-400 hover:bg-emerald-500/10'
+                                                            : 'border-red-500 text-red-400 hover:bg-red-500/10'}`}
+                                                    >
+                                                        {isBlocked ? 'UNBLOCK' : 'BLOCK'}
+                                                    </button>
+                                                    <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                                        <RefreshCw size={12} />
+                                                        {isBlocked ? 'BANNED' : 'Returning'}
+                                                        <span className="opacity-70 ml-1">
+                                                            ({existingGuest.guest_code || 'NO-ID'})
+                                                        </span>
                                                     </span>
-                                                </span>
+                                                </div>
                                             )}
                                         </div>
 

@@ -327,6 +327,13 @@ class Booking(models.Model):
     @property
     def is_fully_paid(self):
         return self.balance_due <= Decimal('0.00')
+
+    @property
+    def is_overdue(self):
+        """Check if booking is active and past expected checkout time."""
+        if self.status != self.Status.CHECKED_IN:
+            return False
+        return timezone.now() > self.expected_checkout
     
     def save(self, *args, **kwargs):
         if not self.booking_ref:

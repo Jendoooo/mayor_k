@@ -230,6 +230,7 @@ class BookingSerializer(serializers.ModelSerializer):
     balance_due = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     
     is_fully_paid = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     
     class Meta:
@@ -241,7 +242,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'expected_checkout', 'actual_checkout', 'num_nights', 'num_guests',
             'room_rate', 'total_amount', 'amount_paid', 
             'total_room_charges', 'total_bar_charges', 'grand_total', 'balance_due',
-            'is_fully_paid',
+            'is_fully_paid', 'is_overdue',
             'discount_amount', 'discount_reason', 'is_complimentary', 
             'complimentary_reason', 'notes', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
