@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { RoomGrid, RoomLegend } from '@/app/components/RoomCard';
 import QuickBookModal from '@/app/components/QuickBookModal';
 import api, { Room, QuickBookData } from '@/app/lib/api';
+import { toast } from 'react-hot-toast';
 
 export default function RoomsPage() {
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -65,11 +66,12 @@ export default function RoomsPage() {
         try {
             await api.quickBook(data);
             setIsQuickBookOpen(false);
+            setSelectedRoom(null);
             fetchRooms();
-            alert('Booking created successfully!');
-        } catch (error) {
+            toast.success('Booking created successfully!');
+        } catch (error: any) {
             console.error('Booking failed:', error);
-            alert('Failed to create booking. Please check available rooms.');
+            toast.error(error?.message || 'Failed to create booking. Please check available rooms.');
         }
     };
 
