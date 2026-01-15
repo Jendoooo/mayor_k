@@ -48,21 +48,42 @@ class RoomSerializer(serializers.ModelSerializer):
     room_type_name = serializers.CharField(source='room_type.name', read_only=True)
     state_display = serializers.CharField(source='get_current_state_display', read_only=True)
     current_booking_id = serializers.SerializerMethodField()
+    booking_stay_info = serializers.SerializerMethodField()
     
     class Meta:
         model = Room
         fields = ['id', 'room_number', 'room_type', 'room_type_name', 'floor',
                   'current_state', 'state_display', 'notes', 'is_active', 'is_available',
-                  'current_booking_id']
+                  'current_booking_id', 'booking_stay_info']
 
     def get_current_booking_id(self, obj):
         if obj.current_state == 'OCCUPIED':
-            booking = Booking.objects.filter(
-                room=obj, 
-                status=Booking.Status.CHECKED_IN
-            ).order_by('-check_in_date', '-created_at').first()
+            booking = self._get_active_booking(obj)
             return booking.id if booking else None
         return None
+
+    def get_booking_stay_info(self, obj):
+        if obj.current_state == 'OCCUPIED':
+            booking = self._get_active_booking(obj)
+            if booking:
+                return {
+                    'check_in': booking.check_in_time, # Time only if today, else datetime?
+                    # We need full datetime for accurate calculation. 
+                    # Booking model has check_in_date and check_in_time separately.
+                    'check_in_full': f"{booking.check_in_date}T{booking.check_in_time}",
+                    'expected_checkout': booking.expected_checkout,
+                    'stay_type': booking.stay_type,
+                    'guest_name': booking.guest.name
+                }
+        return None
+
+    def _get_active_booking(self, room):
+        # Optimization: storing this in context or prefetching would be better, 
+        # but for now a simple helper works.
+        return Booking.objects.filter(
+            room=room, 
+            status=Booking.Status.CHECKED_IN
+        ).order_by('-check_in_date', '-created_at').first()
 
 
 class RoomAvailabilitySerializer(serializers.ModelSerializer):

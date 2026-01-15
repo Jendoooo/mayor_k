@@ -205,6 +205,13 @@ class ApiClient {
     return this.request<Booking>(`/bookings/${bookingId}/check_out/`, { method: 'POST' });
   }
 
+  async extendBooking(bookingId: string, type: 'NIGHTS' | 'SHORT_TO_OVERNIGHT', units: number = 1) {
+    return this.request<Booking>(`/bookings/${bookingId}/extend/`, {
+      method: 'POST',
+      body: JSON.stringify({ type, units }),
+    });
+  }
+
   // Transactions
   async getTransactions() {
     return this.request<PaginatedResponse<Transaction>>('/transactions/');
@@ -321,6 +328,12 @@ export interface Room {
   overnight_rate?: string;
   short_rest_rate?: string;
   current_booking_id?: string | null;
+  booking_stay_info?: {
+    check_in_full: string;
+    expected_checkout: string;
+    stay_type: 'SHORT_REST' | 'OVERNIGHT' | 'LODGE';
+    guest_name: string;
+  } | null;
 }
 
 export interface RoomType {

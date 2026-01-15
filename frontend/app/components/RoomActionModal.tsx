@@ -99,6 +99,49 @@ export default function RoomActionModal({ isOpen, onClose, room, onUpdate }: Roo
                             </button>
                         )}
 
+                        {/* Extend Stay Action */}
+                        {(room.current_state === 'OCCUPIED' && room.booking_stay_info) && (
+                            <div className="mt-2">
+                                <button
+                                    className="btn btn-outline w-full justify-center mb-2"
+                                    onClick={async () => {
+                                        const type = room.booking_stay_info?.stay_type === 'SHORT_REST' ? 'SHORT_TO_OVERNIGHT' : 'NIGHTS';
+                                        const promptMsg = type === 'SHORT_TO_OVERNIGHT'
+                                            ? "Upgrade Short Rest to Overnight? (Charges difference)"
+                                            : "Extend by how many nights?";
+
+                                        let units = 1;
+                                        if (type === 'NIGHTS') {
+                                            const input = prompt(promptMsg, "1");
+                                            if (!input) return;
+                                            units = parseInt(input);
+                                            if (isNaN(units) || units < 1) return alert("Invalid number of nights");
+                                        } else {
+                                            if (!confirm(promptMsg)) return;
+                                        }
+
+                                        setIsLoading(true);
+                                        try {
+                                            if (room.current_booking_id) {
+                                                await api.extendBooking(room.current_booking_id, type, units);
+                                                toast.success('Extension successful! Please collect payment.');
+                                                onUpdate();
+                                                onClose();
+                                            }
+                                        } catch (error) {
+                                            console.error('Extension failed', error);
+                                            toast.error('Failed to extend booking');
+                                        } finally {
+                                            setIsLoading(false);
+                                        }
+                                    }}
+                                    disabled={isLoading}
+                                >
+                                    {room.booking_stay_info.stay_type === 'SHORT_REST' ? '⬆️ Upgrade to Overnight' : '📅 Extend Stay'}
+                                </button>
+                            </div>
+                        )}
+
                         {room.current_state === 'AVAILABLE' && (
                             <button
                                 className="btn btn-outline-danger w-full justify-center"

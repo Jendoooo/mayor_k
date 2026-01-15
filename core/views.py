@@ -16,9 +16,10 @@ from core.serializers import (
     RoomAvailabilitySerializer, GuestSerializer, GuestCreateSerializer,
     BookingSerializer, QuickBookSerializer, TransactionSerializer,
     ExpenseCategorySerializer, ExpenseSerializer, ExpenseCreateSerializer,
+    ExpenseCategorySerializer, ExpenseSerializer, ExpenseCreateSerializer,
     DashboardStatsSerializer, StakeholderDashboardSerializer
 )
-from bookings.models import RoomType, Room, Guest, Booking, RoomStateTransition
+from bookings.models import RoomType, Room, Guest, Booking, RoomStateTransition, BookingExtension
 from finance.models import Transaction, ExpenseCategory, Expense
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import csrf_exempt
@@ -205,6 +206,88 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking.check_in(request.user)
         return Response(BookingSerializer(booking).data)
     
+    @action(detail=True, methods=['post'])
+    def extend(self, request, pk=None):
+        """Extend a booking."""
+        booking = self.get_object()
+        extension_type = request.data.get('type') # 'NIGHTS' or 'SHORT_TO_OVERNIGHT'
+        units = int(request.data.get('units', 1))
+
+        if booking.status != Booking.Status.CHECKED_IN:
+            return Response({'error': 'Can only extend checked-in bookings'}, status=400)
+
+        old_checkout = booking.expected_checkout
+        additional_amount = Decimal('0.00')
+        new_checkout = old_checkout
+
+        if extension_type == 'NIGHTS':
+            # Add nights (usually at overnight rate)
+            rate = booking.room.room_type.base_rate_overnight
+            additional_amount = rate * units
+            new_checkout = old_checkout + timedelta(days=units)
+            
+        elif extension_type == 'SHORT_TO_OVERNIGHT':
+            # Convert short rest to overnight
+            # Cost = Overnight Rate - What they already paid (Short Rest Rate)
+            overnight_rate = booking.room.room_type.base_rate_overnight
+            if booking.stay_type == Booking.StayType.SHORT_REST:
+                 # Assume they paid short rest rate. 
+                 # We simply charge the difference to upgrade.
+                 # Actually, cleaner to just charge the full overnight rate for the "extension" 
+                 # and treat it as a new phase? 
+                 # No, standard is: Upgrade Cost.
+                 additional_amount = overnight_rate - booking.room.room_type.base_rate_short_rest
+                 if additional_amount < 0: additional_amount = 0
+                 
+                 # Set checkout to tomorrow 12 PM (or today 12 PM if it's early?)
+                 # Usually Overnight checkout is next day 12 PM.
+                 now = timezone.now()
+                 # If it's before 12 PM today, maybe checkout is today? Unlikely for Short Rest.
+                 # Assume next day 12 PM.
+                 tomorrow = now + timedelta(days=1)
+                 new_checkout = tomorrow.replace(hour=12, minute=0, second=0, microsecond=0)
+                 
+                 booking.stay_type = Booking.StayType.OVERNIGHT
+            else:
+                return Response({'error': 'Booking is not a Short Rest'}, status=400)
+
+        else:
+             return Response({'error': 'Invalid extension type'}, status=400)
+
+        # Create Extension Record
+        BookingExtension.objects.create(
+            booking=booking,
+            original_checkout=old_checkout,
+            new_checkout=new_checkout,
+            additional_nights=units if extension_type == 'NIGHTS' else 0,
+            additional_amount=additional_amount,
+            approved_by=request.user
+        )
+
+        # Update Booking
+        booking.expected_checkout = new_checkout
+        booking.total_amount += additional_amount
+        # booking.balance_due updates automatically property-wise, 
+        # but we need to fetch it or client recalcs it.
+        # Actually balance_due is a property, so it will reflect higher total_amount.
+        booking.save()
+        
+        # Log Event
+        SystemEvent.log(
+            event_type='BOOKING_EXTENDED',
+            category=SystemEvent.EventCategory.BOOKING,
+            actor=request.user,
+            target=booking,
+            payload={
+                'booking_ref': booking.booking_ref,
+                'extension_type': extension_type,
+                'additional_amount': str(additional_amount),
+                'new_checkout': str(new_checkout)
+            }
+        )
+
+        return Response(BookingSerializer(booking).data)
+
     @action(detail=True, methods=['post'])
     def check_out(self, request, pk=None):
         """Check out a booking."""

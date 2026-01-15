@@ -1,7 +1,8 @@
 'use client';
 
+import * as React from 'react';
 import { Room } from '@/app/lib/api';
-import { User, ShieldAlert, Sparkles, Wrench } from 'lucide-react';
+import { User, ShieldAlert, Sparkles, Wrench, ClockAlert } from 'lucide-react';
 
 interface RoomCardProps {
     room: Room;
@@ -36,27 +37,80 @@ export default function RoomCard({ room, onClick }: RoomCardProps) {
         return null;
     };
 
+    // Timer Logic
+    const [timeLeft, setTimeLeft] = React.useState<string>('');
+    const [isOverdue, setIsOverdue] = React.useState(false);
+
+    React.useEffect(() => {
+        if (room.current_state !== 'OCCUPIED' || !room.booking_stay_info) {
+            setTimeLeft('');
+            return;
+        }
+
+        const updateTimer = () => {
+            const now = new Date();
+            const end = new Date(room.booking_stay_info!.expected_checkout);
+            const diff = end.getTime() - now.getTime();
+            const absDiff = Math.abs(diff);
+
+            const hours = Math.floor(absDiff / (1000 * 60 * 60));
+            const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (diff < 0) {
+                setIsOverdue(true);
+                setTimeLeft(`-${hours}h ${minutes}m`);
+            } else {
+                setIsOverdue(false);
+                setTimeLeft(`${hours}h ${minutes}m`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 60000); // Update every minute
+        return () => clearInterval(interval);
+    }, [room]);
+
     return (
         <div
-            className={`room-card ${stateClass}`}
+            className={`room-card ${stateClass} ${isOverdue ? 'animate-pulse border-danger' : ''}`}
             onClick={() => onClick?.(room)}
             role="button"
             tabIndex={0}
-            title={`${room.room_number} - ${room.room_type_name} (${room.state_display})`}
         >
             <div className="flex flex-col items-center justify-center relative w-full h-full">
                 {/* Status Dot */}
-                <div className="room-status-dot"></div>
+                <div className={`room-status-dot ${isOverdue ? 'bg-danger' : ''}`}></div>
 
                 {/* Optional: Icon indicator in top-left */}
                 <div className="absolute top-2 left-2">
                     <StatusIcon />
                 </div>
 
+                {/* Timer Badge for Occupied Rooms */}
+                {room.current_state === 'OCCUPIED' && timeLeft && (
+                    <div className={`absolute top-2 right-2 text-[10px] font-mono px-1.5 py-0.5 rounded flex items-center gap-1 ${isOverdue ? 'bg-danger text-white' : 'bg-black/30'
+                        }`}>
+                        {isOverdue && <ClockAlert size={10} />}
+                        {timeLeft}
+                    </div>
+                )}
+
                 <div className="room-number mb-1">{room.room_number}</div>
-                <div className="room-type px-2 py-0.5 rounded bg-black/20 text-[10px] tracking-wider font-medium">
-                    {typeAbbr}
-                </div>
+
+                {room.current_state === 'OCCUPIED' && room.booking_stay_info ? (
+                    <div className="flex flex-col items-center">
+                        <div className="text-[10px] opacity-80 truncate max-w-[80px]">
+                            {room.booking_stay_info.guest_name.split(' ')[0]}
+                        </div>
+                        <div className="room-type px-2 py-0.5 mt-1 rounded bg-black/20 text-[9px] tracking-wider font-medium">
+                            {room.booking_stay_info.stay_type === 'SHORT_REST' ? 'SHORT' : typeAbbr}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="room-type px-2 py-0.5 rounded bg-black/20 text-[10px] tracking-wider font-medium">
+                        {typeAbbr}
+                    </div>
+                )}
             </div>
         </div>
     );
