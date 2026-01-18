@@ -1,74 +1,7 @@
 'use client';
 
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-
-// ... (keep existing imports)
-
-// ... (keep existing state)
-
-const toggleBlockStatus = async () => {
-    if (!existingGuest) return;
-
-    try {
-        // Optimistic update
-        const newStatus = !isBlocked;
-        setIsBlocked(newStatus);
-
-        const res = await fetch(`http://localhost:8000/api/v1/guests/${existingGuest.id}/`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                // Add auth header if needed, assuming cookie based for now or handled by global fetch wrapper logic if we used 'api' client
-            },
-            credentials: 'include',
-            body: JSON.stringify({ is_blocked: newStatus }),
-        });
-
-        if (res.ok) {
-            const updatedGuest = await res.json();
-            setExistingGuest(updatedGuest);
-            // Ensure state matches backend
-            setIsBlocked(updatedGuest.is_blocked);
-            toast.success(updatedGuest.is_blocked ? 'Guest blocked' : 'Guest unblocked');
-        } else {
-            // Revert on failure
-            setIsBlocked(!newStatus);
-            toast.error('Failed to update guest status');
-        }
-    } catch (err) {
-        console.error(err);
-        setIsBlocked(!isBlocked); // Revert
-        toast.error('Error updating status');
-    }
-};
-
-// ... (keep existing return)
-
-<div className="flex items-center justify-between">
-    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-        <User size={14} /> Guest Information
-    </h3>
-    {existingGuest && (
-        <div className="flex items-center gap-2">
-            <button
-                type="button"
-                onClick={toggleBlockStatus}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isBlocked
-                    ? 'border-emerald-500 text-emerald-400 hover:bg-emerald-500/10'
-                    : 'border-red-500 text-red-400 hover:bg-red-500/10'}`}
-            >
-                {isBlocked ? 'UNBAN' : 'BAN'}
-            </button>
-            <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                <RefreshCw size={12} />
-                {isBlocked ? 'BANNED' : 'Returning'}
-                <span className="opacity-70 ml-1">
-                    ({existingGuest.guest_code || 'NO-ID'})
-                </span>
-            </span>
-        </div>
-    )}
-</div>
 import { Room, QuickBookData, Guest, Booking } from '@/app/lib/api';
 import { X, User, Phone, Home, Clock, CreditCard, FileText, Loader2, RefreshCw, Zap, Printer, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -102,7 +35,7 @@ export default function QuickBookModal({
         num_nights: number;
         num_guests: number;
         payment_method: 'CASH' | 'TRANSFER' | 'POS' | 'PAYSTACK' | 'SPLIT';
-        amount_paid: string; // Use string for better input control
+        amount_paid: string;
         notes: string;
     }>({
         guest_name: '',
@@ -131,7 +64,7 @@ export default function QuickBookModal({
     // Auto-search for existing guest when phone is entered
     useEffect(() => {
         const phone = formData.guest_phone.trim();
-        setIsBlocked(false); // Reset block status on new type
+        setIsBlocked(false);
 
         if (phone.length >= 10) {
             fetch(`http://localhost:8000/api/v1/guests/`, {
@@ -170,7 +103,6 @@ export default function QuickBookModal({
             ? parseFloat(String(selectedRoomDetails.short_rest_rate || '0'))
             : parseFloat(String(selectedRoomDetails.overnight_rate || '0'));
 
-        // For LODGE, multiply by nights
         if (formData.stay_type === 'LODGE') {
             return baseRate * formData.num_nights;
         }
@@ -188,7 +120,7 @@ export default function QuickBookModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isBlocked) return; // Prevent submission if blocked
+        if (isBlocked) return;
 
         setLoading(true);
 
@@ -200,13 +132,10 @@ export default function QuickBookModal({
 
             if (booking) {
                 setBookingSuccess(booking);
-                // Do NOT close modal, show success view instead
             } else {
-                // Determine if parent didn't return booking, maybe just close
                 onClose();
             }
 
-            // Reset form for next time (keep basic defaults)
             setFormData({
                 guest_name: '',
                 guest_phone: '',
@@ -234,11 +163,9 @@ export default function QuickBookModal({
         if (!existingGuest) return;
 
         try {
-            // Optimistic update
             const newStatus = !isBlocked;
             setIsBlocked(newStatus);
 
-            // Use simple fetch for now as api client might need updating for PATCH guests specific endpoint if not generic
             const res = await fetch(`http://localhost:8000/api/v1/guests/${existingGuest.id}/`, {
                 method: 'PATCH',
                 headers: {
@@ -254,7 +181,7 @@ export default function QuickBookModal({
                 setIsBlocked(updatedGuest.is_blocked);
                 toast.success(updatedGuest.is_blocked ? 'Guest blocked' : 'Guest unblocked');
             } else {
-                setIsBlocked(!newStatus); // Revert
+                setIsBlocked(!newStatus);
                 toast.error('Failed to update status');
             }
         } catch (err) {
@@ -290,7 +217,6 @@ export default function QuickBookModal({
                         onClick={e => e.stopPropagation()}
                     >
                         {bookingSuccess ? (
-                            // Success View
                             <div className="p-8 text-center space-y-6">
                                 <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/50">
                                     <CheckCircle size={40} className="text-emerald-400" />
@@ -315,18 +241,14 @@ export default function QuickBookModal({
                                         Done
                                     </button>
                                 </div>
-                                {/* Hidden Receipt Template */}
                                 <div className="hidden">
                                     <ReceiptTemplate ref={receiptRef} booking={bookingSuccess} />
                                 </div>
                                 <ReceiptTemplate booking={bookingSuccess} />
                             </div>
                         ) : (
-                            // Standard Form View
                             <>
-                                {/* Header */}
                                 <div className="px-6 py-5 bg-gradient-to-r from-champagne-gold/20 to-transparent border-b border-white/10">
-                                    {/* ... Header content ... */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-champagne-gold/20 rounded-xl">
@@ -347,7 +269,6 @@ export default function QuickBookModal({
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                                    {/* Guest Info Section */}
                                     <div className="space-y-4">
                                         {/* BANNED GUEST ALERT */}
                                         {isBlocked && existingGuest && (
@@ -362,7 +283,7 @@ export default function QuickBookModal({
                                                 <div>
                                                     <h3 className="text-red-400 font-bold uppercase tracking-wider text-xs mb-1">Critical: Guest Banned</h3>
                                                     <p className="text-white text-sm font-bold mb-1">{existingGuest.name} is on the blacklist.</p>
-                                                    <p className="text-red-200 text-xs italic">" {existingGuest.notes || 'No reason specified'} "</p>
+                                                    <p className="text-red-200 text-xs italic">&quot;{existingGuest.notes || 'No reason specified'}&quot;</p>
                                                 </div>
                                             </motion.div>
                                         )}
@@ -419,7 +340,6 @@ export default function QuickBookModal({
                                         </div>
                                     </div>
 
-                                    {/* Room Selection */}
                                     <div>
                                         <label className="block text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-2">
                                             <Home size={12} /> Room *
@@ -439,7 +359,6 @@ export default function QuickBookModal({
                                         </select>
                                     </div>
 
-                                    {/* Stay Type & Duration */}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-2">
@@ -450,7 +369,7 @@ export default function QuickBookModal({
                                                 onChange={e => setFormData({
                                                     ...formData,
                                                     stay_type: e.target.value as 'SHORT_REST' | 'OVERNIGHT' | 'LODGE',
-                                                    amount_paid: '' // Reset amount when stay type changes
+                                                    amount_paid: ''
                                                 })}
                                                 className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-champagne-gold/50 appearance-none cursor-pointer"
                                             >
@@ -460,7 +379,6 @@ export default function QuickBookModal({
                                             </select>
                                         </div>
 
-                                        {/* Only show nights for LODGE stay type */}
                                         {formData.stay_type === 'LODGE' && (
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-500 mb-1.5">Nights</label>
@@ -471,7 +389,7 @@ export default function QuickBookModal({
                                                     onChange={e => setFormData({
                                                         ...formData,
                                                         num_nights: parseInt(e.target.value) || 2,
-                                                        amount_paid: '' // Reset amount when nights change
+                                                        amount_paid: ''
                                                     })}
                                                     className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-champagne-gold/50"
                                                 />
@@ -479,7 +397,6 @@ export default function QuickBookModal({
                                         )}
                                     </div>
 
-                                    {/* Payment Section */}
                                     <div className="bg-slate-800/30 rounded-2xl p-5 border border-white/5 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -493,7 +410,6 @@ export default function QuickBookModal({
                                             </div>
                                         </div>
 
-                                        {/* Payment Method Buttons */}
                                         <div className="grid grid-cols-4 gap-2">
                                             {paymentMethods.map(method => (
                                                 <button
@@ -511,7 +427,6 @@ export default function QuickBookModal({
                                             ))}
                                         </div>
 
-                                        {/* Amount Paid */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-500 mb-1.5">Amount Received (₦) *</label>
                                             <div className="relative">
@@ -521,7 +436,6 @@ export default function QuickBookModal({
                                                     inputMode="numeric"
                                                     value={formData.amount_paid}
                                                     onChange={e => {
-                                                        // Only allow numbers
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
                                                         setFormData({ ...formData, amount_paid: value });
                                                     }}
@@ -530,7 +444,6 @@ export default function QuickBookModal({
                                                     className="w-full bg-slate-800/50 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-lg font-mono focus:outline-none focus:border-champagne-gold/50"
                                                 />
                                             </div>
-                                            {/* Balance indicator */}
                                             {formData.amount_paid && parseFloat(formData.amount_paid) < totalAmount && (
                                                 <p className="text-xs text-red-400 mt-1.5">
                                                     ⚠️ Balance: ₦{(totalAmount - parseFloat(formData.amount_paid)).toLocaleString()}
@@ -544,7 +457,6 @@ export default function QuickBookModal({
                                         </div>
                                     </div>
 
-                                    {/* Notes */}
                                     <div>
                                         <label className="block text-xs font-medium text-slate-500 mb-1.5 flex items-center gap-2">
                                             <FileText size={12} /> Notes (optional)
@@ -558,7 +470,6 @@ export default function QuickBookModal({
                                         />
                                     </div>
 
-                                    {/* Action Buttons */}
                                     <div className="flex gap-3 pt-2">
                                         <button
                                             type="button"
@@ -569,7 +480,7 @@ export default function QuickBookModal({
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={loading || !formData.room_id || !formData.guest_name || !formData.amount_paid}
+                                            disabled={loading || !formData.room_id || !formData.guest_name || !formData.amount_paid || isBlocked}
                                             className="flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-900/30 hover:shadow-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                                         >
                                             {loading ? (
